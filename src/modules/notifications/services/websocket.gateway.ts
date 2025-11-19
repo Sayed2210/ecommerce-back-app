@@ -1,3 +1,9 @@
+import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage } from '@nestjs/websockets';
+import { Socket } from 'socket.io';
+import { NotificationService } from '../services/notification.service';
+import { JwtService } from '@nestjs/jwt';
+import { NotificationDto } from '../dto/notification.dto';
+
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL,
@@ -8,7 +14,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   constructor(
     private notificationService: NotificationService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   handleConnection(client: Socket) {
     try {
@@ -28,9 +34,9 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   async handleMarkAsRead(client: Socket, data: { notificationId: string }) {
     const token = client.handshake.headers.authorization?.split(' ')[1];
     const payload = this.jwtService.verify(token);
-    
+
     await this.notificationService.markAsRead(data.notificationId, payload.sub);
-    
+
     client.emit('notificationRead', { notificationId: data.notificationId });
   }
 
