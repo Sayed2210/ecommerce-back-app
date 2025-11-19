@@ -1,6 +1,10 @@
 import { Processor, Process } from '@nestjs/bullmq';
-// import { Job } from 'bull';
-// import { MailerService } from '../../mailer/mailer.service';
+import { Job } from 'bullmq';
+import { MailerService } from '@modules/mailer/mailer.service';
+import { CartRepository } from '../repositories/cart.repository';
+import { differenceInHours, subHours } from 'date-fns';
+import { MoreThan } from 'typeorm';
+import { OrderRepository } from '@modules/orders/repositories/order.repository';
 
 @Processor('abandoned-cart')
 export class AbandonedCartProcessor {
