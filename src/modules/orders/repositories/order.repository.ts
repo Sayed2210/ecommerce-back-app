@@ -27,4 +27,18 @@ export class OrderRepository extends AbstractRepository<Order> {
             relations: ['user', 'items', 'shippingAddress'],
         });
     }
+
+    async getFrequentlyBoughtTogether(productId: string, limit = 5) {
+        return this.createQueryBuilder('order')
+            .innerJoin('order.items', 'item')
+            .innerJoin('order.items', 'relatedItem')
+            .where('item.productId = :productId', { productId })
+            .andWhere('relatedItem.productId != :productId', { productId })
+            .select('relatedItem.productId', 'productId')
+            .addSelect('COUNT(*)', 'frequency')
+            .groupBy('relatedItem.productId')
+            .orderBy('frequency', 'DESC')
+            .limit(limit)
+            .getRawMany();
+    }
 }

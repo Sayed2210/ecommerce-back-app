@@ -1,8 +1,14 @@
-import { Repository as TypeORMRepository, ObjectLiteral, FindOptionsWhere, DeepPartial, FindManyOptions } from 'typeorm';
+import { Repository as TypeORMRepository, SelectQueryBuilder, ObjectLiteral, FindOptionsWhere, DeepPartial, FindManyOptions } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 export abstract class AbstractRepository<T extends ObjectLiteral> {
     constructor(protected readonly repository: TypeORMRepository<T>) { }
+
+
+    protected createQueryBuilder(alias?: string): SelectQueryBuilder<T> {
+        return this.repository.createQueryBuilder(alias || this.repository.metadata.name.toLowerCase());
+    }
+
 
     async findOne(where: FindOptionsWhere<T>): Promise<T | null> {
         return this.repository.findOne({ where });
