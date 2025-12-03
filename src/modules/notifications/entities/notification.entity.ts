@@ -31,6 +31,12 @@ export class Notification extends BaseEntity {
   @Column({ type: 'jsonb', default: {} })
   metadata: Record<string, any>;
 
+  @Column({ name: 'is_deleted', default: false, nullable: true })
+  isDeleted: boolean;
+
+  @Column()
+  userId: string;
+
   @ManyToOne(() => User, user => user.notifications, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

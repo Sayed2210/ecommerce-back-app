@@ -19,7 +19,7 @@ export class RecommendationsService {
   }
 
   async getSimilarProducts(productId: string, limit = 8): Promise<Product[]> {
-    const product = await this.productRepository.findOne({
+    const product = await this.productRepository.findOneWithOptions({
       where: { id: productId },
       relations: ['category', 'brand'],
     });
@@ -30,7 +30,7 @@ export class RecommendationsService {
   }
 
   async getPersonalizedRecommendations(userId: string, limit = 10): Promise<Product[]> {
-    const user = await this.userRepository.findOne({
+    const user = await this.userRepository.findOneWithOptions({
       where: { id: userId },
       relations: ['orders', 'orders.items', 'wishlist'],
     });
@@ -43,7 +43,7 @@ export class RecommendationsService {
     ];
 
     const topCategoryIds = Object.entries(
-      categoryIds.reduce((acc, catId) => ({ ...acc, [catId]: (acc[catId] || 0) + 1 }), {}),
+      categoryIds.reduce((acc: Record<string, number>, catId) => ({ ...acc, [catId]: (acc[catId] || 0) + 1 }), {}),
     )
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)

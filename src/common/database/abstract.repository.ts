@@ -1,4 +1,4 @@
-import { Repository as TypeORMRepository, SelectQueryBuilder, ObjectLiteral, FindOptionsWhere, DeepPartial, FindManyOptions } from 'typeorm';
+import { Repository as TypeORMRepository, SelectQueryBuilder, ObjectLiteral, FindOptionsWhere, DeepPartial, FindManyOptions, FindOneOptions } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 export abstract class AbstractRepository<T extends ObjectLiteral> {
@@ -55,5 +55,9 @@ export abstract class AbstractRepository<T extends ObjectLiteral> {
 
     async permanentDelete(id: string): Promise<void> {
         await this.repository.delete(id);
+    }
+
+    async findOneWithOptions(options: FindOneOptions<T>): Promise<T | null> {
+        return this.repository.findOne(options);
     }
 }

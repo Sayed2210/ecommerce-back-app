@@ -53,7 +53,7 @@ export class ProductRepository extends AbstractRepository<Product> {
         return this.repository.findBy({ id: In(productIds) });
     }
 
-    async findByCategoriesWithRating(categoryIds: string[]): Promise<Product[]> {
+    async findByCategoriesWithRating(categoryIds: string[], limit: number = 10): Promise<Product[]> {
         return this.createQueryBuilder('product')
             .leftJoinAndSelect('product.reviews', 'review')
             .where('product.categoryId IN (:...categoryIds)', { categoryIds })
@@ -61,6 +61,7 @@ export class ProductRepository extends AbstractRepository<Product> {
             .addSelect('AVG(review.rating)', 'averageRating')
             .groupBy('product.id')
             .orderBy('averageRating', 'DESC')
+            .limit(limit)
             .getMany();
     }
 }
