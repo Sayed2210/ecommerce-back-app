@@ -24,6 +24,12 @@ export class ProductVariant extends BaseEntity {
     @Column({ name: 'inventory_quantity', default: 0 })
     inventoryQuantity: number;
 
+    @Column({ name: 'reserved_quantity', default: 0 })
+    reservedQuantity: number;
+
+    @Column({ name: 'low_stock_threshold', default: 5 })
+    lowStockThreshold: number;
+
     @Column({ type: 'jsonb', default: {} })
     optionValues: Record<string, any>;
 

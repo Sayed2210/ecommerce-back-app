@@ -4,6 +4,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Coupon } from '../entities/coupon.entity';
 import { Order } from '../entities/order.entity';
+
+export interface CouponValidationResult {
+    valid: boolean;
+    message?: string;
+    coupon?: Coupon;
+}
+
 @Injectable()
 export class CouponService {
     constructor(

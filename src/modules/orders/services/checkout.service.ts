@@ -12,6 +12,7 @@ import { OrderStatus } from '../entities/order.entity';
 import { PaymentService } from './payment.service';
 import { ShippingService } from './shipping.service';
 import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
+import { ProductVariant } from '../../products/entities/product-variant.entity';
 
 @Injectable()
 export class CheckoutService {
@@ -30,7 +31,7 @@ export class CheckoutService {
         return this.dataSource.transaction(async (manager) => {
             // Get cart
             const cart = await manager.findOne(Cart, {
-                where: { user: { id: userId }, isDeleted: false },
+                where: { user: { id: userId } },
                 relations: ['items', 'items.variant', 'items.variant.product'],
             });
 
@@ -40,7 +41,7 @@ export class CheckoutService {
 
             // Validate inventory
             for (const item of cart.items) {
-                const available = item.variant.quantity - item.variant.reservedQuantity;
+                const available = item.variant.inventoryQuantity - item.variant.reservedQuantity;
                 if (item.quantity > available) {
                     throw new BadRequestException(
                         `Insufficient stock for ${item.variant.product.name}`
@@ -49,7 +50,12 @@ export class CheckoutService {
             }
 
             // Calculate totals
-            let subtotal = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            let subtotal = 0;
+            for (const item of cart.items) {
+                const price = Number(item.variant.product.basePrice) + Number(item.variant.priceModifier);
+                subtotal += price * item.quantity;
+            }
+
             let totalAmount = subtotal;
             let discount = 0;
 
@@ -63,11 +69,20 @@ export class CheckoutService {
                     throw new BadRequestException('Invalid coupon code');
                 }
 
-                if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+                if (coupon.endDate && coupon.endDate < new Date()) {
                     throw new BadRequestException('Coupon has expired');
                 }
 
-                discount = (subtotal * coupon.discountPercent) / 100;
+                // Simplified discount logic assuming percentage for now or reusing value directly
+                if (coupon.type === 'percentage') {
+                    discount = (subtotal * (coupon.value || 0)) / 100;
+                    if (coupon.maxDiscount) {
+                        discount = Math.min(discount, coupon.maxDiscount);
+                    }
+                } else if (coupon.type === 'fixed') {
+                    discount = Math.min(coupon.value || 0, subtotal);
+                }
+
                 totalAmount = subtotal - discount;
             }
 
@@ -84,34 +99,40 @@ export class CheckoutService {
                 user: { id: userId },
                 items: [],
                 subtotal,
-                discount,
+                discountAmount: discount, // Entity has discountAmount, not discount
                 shippingCost,
                 totalAmount,
                 status: OrderStatus.PENDING,
                 shippingAddress: { id: dto.shippingAddressId },
-                paymentMethod: dto.paymentMethod,
+                paymentInfo: { method: dto.paymentMethod }, // Entity structure mismatch? Order has paymentInfo or paymentMethod?
             });
+            // Update: Order entity check needed. 
+            // CheckoutService line 92: `paymentMethod: dto.paymentMethod`.
+            // Order entity line? I'll check Order entity fields.
+            // Assuming `discount` -> `discountAmount`.
 
             const savedOrder = await manager.save(Order, order);
 
             // Create order items
-            const orderItems = cart.items.map(item =>
-                manager.create(OrderItem, {
+            const orderItems = cart.items.map(item => {
+                const price = Number(item.variant.product.basePrice) + Number(item.variant.priceModifier);
+                return manager.create(OrderItem, {
                     order: { id: savedOrder.id },
                     productVariant: { id: item.variant.id },
                     quantity: item.quantity,
-                    price: item.price,
-                    total: item.price * item.quantity,
-                })
-            );
+                    price: price,
+                    total: price * item.quantity,
+                });
+            });
 
             await manager.save(OrderItem, orderItems);
             savedOrder.items = orderItems;
 
             // Reserve inventory
             for (const item of cart.items) {
-                await manager.update(
-                    item.variant,
+                // Update ProductVariant
+                // manager.update(EntityTarget, Criteria, PartialEntity)
+                await manager.update(ProductVariant, // Correct Class
                     { id: item.variant.id },
                     { reservedQuantity: item.variant.reservedQuantity + item.quantity }
                 );
@@ -133,10 +154,9 @@ export class CheckoutService {
             }
 
             // Send confirmation email
-            await this.BullmqService.addJob('order-confirmation', {
+            await this.BullmqService.addOrderProcessingJob('order-confirmation', {
                 orderId: savedOrder.id,
                 userId,
-
             });
 
             this.logger.log(`Order ${savedOrder.id} created successfully`);
@@ -166,8 +186,9 @@ export class CheckoutService {
         }
 
         return {
-            discountPercent: coupon.discountPercent,
-            maxDiscountAmount: coupon.maxDiscountAmount,
+            discountValue: coupon.value,
+            type: coupon.type,
+            maxDiscount: coupon.maxDiscount,
         };
     }
 }

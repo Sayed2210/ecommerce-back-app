@@ -18,9 +18,8 @@ export class CartService {
         private cartItemRepository: Repository<CartItem>,
         @InjectRepository(ProductVariant)
         private productVariantRepository: Repository<ProductVariant>,
-        privateproductRepository: ProductRepository, // Assuming this is injected via module
-        private readonly productRepo: ProductRepository, // fix injection name if needed, assuming ProductRepository is standard
-        private redisService: RedisService,
+        private readonly productRepository: ProductRepository,
+        private readonly redisService: RedisService,
     ) { }
 
     async getOrCreateCart(userId?: string, sessionId?: string): Promise<Cart> {

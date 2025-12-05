@@ -19,6 +19,9 @@ export class RefreshToken extends BaseEntity {
     @Column({ name: 'expires_at' })
     expiresAt: Date;
 
+    @Column({ name: 'user_id' })
+    userId: string;
+
     @ManyToOne(() => User, user => user.refreshTokens, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'user_id' })
     user: User;
