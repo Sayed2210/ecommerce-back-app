@@ -1,75 +1,67 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In, Brackets } from 'typeorm';
+import { AbstractRepository } from '../../../common/database/abstract.repository';
 import { Product } from '../entities/product.entity';
 
-export interface ProductFilters {
-    categorySlug?: string;
-    brandId?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    search?: string;
-    sortBy?: 'price-low' | 'price-high' | 'newest' | 'popularity';
-    page: number;
-    limit: number;
-}
-
 @Injectable()
-export class ProductRepository extends Repository<Product> {
-    async findWithFilters(filters: ProductFilters): Promise<[Product[], number]> {
-        const query = this.createQueryBuilder('product')
-            .leftJoinAndSelect('product.category', 'category')
-            .leftJoinAndSelect('product.brand', 'brand')
-            .leftJoinAndSelect('product.variants', 'variants')
-            .leftJoinAndSelect('product.images', 'images')
-            .where('product.isActive = true');
+export class ProductRepository extends AbstractRepository<Product> {
+    constructor(
+        @InjectRepository(Product)
+        private readonly productRepository: Repository<Product>,
+    ) {
+        super(productRepository);
+    }
 
-        // Index-backed filters
-        if (filters.categorySlug) {
-            query.andWhere('category.slug = :slug', { slug: filters.categorySlug });
-        }
+    // Custom methods specific to Product
+    async findBySlug(slug: string): Promise<Product | null> {
+        return this.findOne({ slug } as any);
+    }
 
-        if (filters.brandId) {
-            query.andWhere('product.brandId = :brandId', { brandId: filters.brandId });
-        }
+    async findByCategory(categoryId: string): Promise<Product[]> {
+        return this.repository.find({
+            where: { category: { id: categoryId } },
+            relations: ['variants', 'images'],
+        });
+    }
 
-        if (filters.minPrice || filters.maxPrice) {
-            query.andWhere('product.basePrice BETWEEN :min AND :max', {
-                min: filters.minPrice || 0,
-                max: filters.maxPrice || 999999,
-            });
-        }
+    async searchByName(name: string): Promise<Product[]> {
+        return this.repository
+            .createQueryBuilder('product')
+            .where('product.name ILIKE :name', { name: `%${name}%` })
+            .andWhere('product.deletedAt IS NULL')
+            .getMany();
+    }
 
-        // Full-text search with index
-        if (filters.search) {
-            query.andWhere('product.search_vector @@ plainto_tsquery(:search)', {
-                search: filters.search,
-            });
-        }
 
-        // Sort
-        switch (filters.sortBy) {
-            case 'price-low':
-                query.orderBy('product.basePrice', 'ASC');
-                break;
-            case 'price-high':
-                query.orderBy('product.basePrice', 'DESC');
-                break;
-            case 'newest':
-                query.orderBy('product.createdAt', 'DESC');
-                break;
-            case 'popularity':
-                query.orderBy('product.metadata->>"views"', 'DESC');
-                break;
-            default:
-                query.orderBy('product.publishedAt', 'DESC');
-        }
+    async findSimilarProducts(productId: string, categoryId: string, brandId: string, limit = 8): Promise<Product[]> {
+        return this.createQueryBuilder('product')
+            .where('product.id != :productId', { productId })
+            .andWhere('product.isActive = true')
+            .andWhere(
+                new Brackets(qb => {
+                    qb.where('product.categoryId = :categoryId', { categoryId })
+                        .orWhere('product.brandId = :brandId', { brandId });
+                }),
+            )
+            .orderBy('RANDOM()')
+            .limit(limit)
+            .getMany();
+    }
 
-        // Pagination
-        const [products, total] = await query
-            .skip((filters.page - 1) * filters.limit)
-            .take(filters.limit)
-            .getManyAndCount();
+    async findByIds(productIds: string[]): Promise<Product[]> {
+        return this.repository.findBy({ id: In(productIds) });
+    }
 
-        return [products, total];
+    async findByCategoriesWithRating(categoryIds: string[], limit: number = 10): Promise<Product[]> {
+        return this.createQueryBuilder('product')
+            .leftJoinAndSelect('product.reviews', 'review')
+            .where('product.categoryId IN (:...categoryIds)', { categoryIds })
+            .andWhere('product.isActive = true')
+            .addSelect('AVG(review.rating)', 'averageRating')
+            .groupBy('product.id')
+            .orderBy('averageRating', 'DESC')
+            .limit(limit)
+            .getMany();
     }
 }

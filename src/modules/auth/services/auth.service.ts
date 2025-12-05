@@ -1,100 +1,105 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../entities/user.entity';
-import { RefreshToken } from '../entities/refresh-token.entity';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PasswordService } from '@common/services/password.service';
-import { LoginDto } from '../dto/login.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { v4 as uuidv4 } from 'uuid';
-import { addDays } from 'date-fns';
-
+import { UserRepository } from '../repositories/user.repository';
+import { PasswordService } from './password.service';
+import { TokenService } from './token.service';
+import { RegisterDto } from '../dtos/register.dto';
+import { LoginDto } from '../dtos/login.dto';
+import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
+import { ResetPasswordDto } from '../dtos/reset-password.dto';
+import { RefreshTokenDto } from '../dtos/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-        @InjectRepository(RefreshToken)
-        private refreshTokenRepository: Repository<RefreshToken>,
-        private jwtService: JwtService,
-        private passwordService: PasswordService,
-        private configService: ConfigService,
+        private readonly userRepository: UserRepository,
+        private readonly jwtService: JwtService,
+        private readonly passwordService: PasswordService,
+        private readonly tokenService: TokenService,
+        private readonly configService: ConfigService,
     ) { }
 
-    async login(loginDto: LoginDto, ipAddress: string, userAgent: string) {
-        const user = await this.userRepository.findOne({ where: { email: loginDto.email } });
-        if (!user || !(await this.passwordService.compare(loginDto.password, user.passwordHash))) {
+    async register(dto: RegisterDto) {
+        const existingUser = await this.userRepository.findByEmail(dto.email);
+        if (existingUser) {
+            throw new ConflictException('Email already exists');
+        }
+
+        const hashedPassword = await this.passwordService.hash(dto.password);
+        const user = await this.userRepository.create({
+            ...dto,
+            password: hashedPassword,
+        });
+
+        const tokens = await this.tokenService.generateTokens(user.id);
+        await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
+
+        return {
+            user: this.sanitizeUser(user),
+            tokens,
+        };
+    }
+
+    async login(dto: LoginDto) {
+        const user = await this.userRepository.findByEmail(dto.email);
+        if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        if (!user.isActive) {
-            throw new UnauthorizedException('Account is deactivated');
+        const isPasswordValid = await this.passwordService.verify(dto.password, user.password);
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Invalid credentials');
         }
 
-        const tokens = await this.generateTokens(user, ipAddress, userAgent);
+        const tokens = await this.tokenService.generateTokens(user.id);
+        await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
 
         return {
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
             user: this.sanitizeUser(user),
+            tokens,
         };
     }
 
-    async refreshToken(refreshTokenDto: RefreshTokenDto, ipAddress: string, userAgent: string) {
-        const payload = await this.jwtService.verifyAsync(refreshTokenDto.refreshToken, {
-            secret: this.configService.get('JWT_REFRESH_SECRET'),
-        });
+    async refreshTokens(dto: RefreshTokenDto) {
+        const payload = await this.tokenService.verifyRefreshToken(dto.refreshToken);
+        const user = await this.userRepository.findOneOrFail({ id: payload.sub });
 
-        const tokenRecord = await this.refreshTokenRepository.findOne({
-            where: { token: refreshTokenDto.refreshToken, isRevoked: false },
-            relations: ['user'],
-        });
+        const newTokens = await this.tokenService.generateTokens(user.id);
+        await this.tokenService.revokeRefreshToken(dto.refreshToken);
+        await this.tokenService.saveRefreshToken(user.id, newTokens.refreshToken);
 
-        if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
-            throw new UnauthorizedException('Invalid refresh token');
+        return newTokens;
+    }
+
+    async forgotPassword(dto: ForgotPasswordDto) {
+        const user = await this.userRepository.findByEmail(dto.email);
+        if (!user) {
+            return { message: 'If an account exists, we will send a reset link' };
         }
 
-        // Rotation: Revoke old token
-        await this.refreshTokenRepository.update(tokenRecord.id, { isRevoked: true });
-
-        // Generate new pair
-        const tokens = await this.generateTokens(tokenRecord.user, ipAddress, userAgent);
-
-        return {
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-        };
+        const resetToken = await this.tokenService.generateResetToken(user.id);
+        // Send email with reset token via queue
+        return { message: 'Password reset email sent' };
     }
 
-    private async generateTokens(user: User, ipAddress: string, userAgent: string) {
-        const payload = { sub: user.id, email: user.email, role: user.role };
+    async resetPassword(dto: ResetPasswordDto) {
+        const payload = await this.tokenService.verifyResetToken(dto.token);
+        const hashedPassword = await this.passwordService.hash(dto.password);
 
-        const accessToken = await this.jwtService.signAsync(payload, {
-            secret: this.configService.get('JWT_SECRET'),
-            expiresIn: '15m',
-        });
+        await this.userRepository.update(payload.sub, { password: hashedPassword });
+        await this.tokenService.revokeResetToken(dto.token);
 
-        const refreshToken = uuidv4();
-        const refreshTokenEntity = this.refreshTokenRepository.create({
-            token: refreshToken,
-            user,
-            ipAddress,
-            userAgent,
-            expiresAt: addDays(new Date(), 7),
-        });
-
-        await this.refreshTokenRepository.save(refreshTokenEntity);
-
-        return { accessToken, refreshToken };
+        return { message: 'Password reset successful' };
     }
 
-    async logout(userId: string, refreshToken: string) {
-        await this.refreshTokenRepository.update(
-            { user: { id: userId }, token: refreshToken },
-            { isRevoked: true },
-        );
+    async logout(refreshToken: string) {
+        await this.tokenService.revokeRefreshToken(refreshToken);
+        return { message: 'Logged out successfully' };
+    }
+
+    private sanitizeUser(user: any) {
+        const { password, ...result } = user;
+        return result;
     }
 }

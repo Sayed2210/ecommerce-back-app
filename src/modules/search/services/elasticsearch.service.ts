@@ -102,26 +102,28 @@ export class ElasticsearchService {
                 },
                 sort: this.getSortClause(filters.sortBy),
             },
-        });
+        } as any);
+
+        const total = typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value || 0;
 
         return {
             products: result.hits.hits.map(hit => hit._source),
-            total: result.hits.total.value,
+            total,
         };
     }
 
     private getSortClause(sortBy: string) {
         switch (sortBy) {
             case 'price-low':
-                return [{ price: { order: 'asc' } }];
+                return [{ price: { order: 'asc' as const } }];
             case 'price-high':
-                return [{ price: { order: 'desc' } }];
+                return [{ price: { order: 'desc' as const } }];
             case 'newest':
-                return [{ createdAt: { order: 'desc' } }];
+                return [{ createdAt: { order: 'desc' as const } }];
             case 'rating':
-                return [{ 'metadata.avgRating': { order: 'desc' } }];
+                return [{ 'metadata.avgRating': { order: 'desc' as const } }];
             default:
-                return [{ _score: { order: 'desc' } }]; // Relevance
+                return [{ _score: { order: 'desc' as const } }]; // Relevance
         }
     }
 }
