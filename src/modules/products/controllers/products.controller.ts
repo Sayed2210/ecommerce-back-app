@@ -17,6 +17,9 @@ import { UpdateProductDto } from '../dtos/update-product.dto';
 import { FilterDto } from '../dtos/filter.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
 
 /**
  * Products Controller
@@ -49,7 +52,8 @@ export class ProductsController {
      * Create a new product (Admin only)
      */
     @Post()
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() createProductDto: CreateProductDto) {
         return this.productsService.create(createProductDto);
@@ -59,7 +63,8 @@ export class ProductsController {
      * Update an existing product (Admin only)
      */
     @Patch(':id')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
     async update(
         @Param('id') id: string,
         @Body() updateProductDto: UpdateProductDto
@@ -71,7 +76,8 @@ export class ProductsController {
      * Delete a product (Admin only)
      */
     @Delete(':id')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.NO_CONTENT)
     async remove(@Param('id') id: string) {
         await this.productsService.remove(id);

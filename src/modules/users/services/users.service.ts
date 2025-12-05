@@ -32,7 +32,7 @@ export class UsersService {
     }
 
     async remove(id: string) {
-        await this.userRepository.softDelete(id);
+        await this.userRepository.update(id, { isActive: false });
     }
 
     async getWishlist(userId: string) {
@@ -44,7 +44,8 @@ export class UsersService {
     }
 
     private sanitizeUser(user: any) {
-        const { password, ...result } = user;
+        // Remove sensitive data
+        const { passwordHash, refreshTokens, ...result } = user;
         return result;
     }
 }

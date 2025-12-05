@@ -22,20 +22,14 @@ export class Notification extends BaseEntity {
   @Column({ nullable: true })
   message?: string;
 
-  @Column({ name: 'is_read', default: false })
-  isRead: boolean;
+  @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
+  readAt?: Date;
 
   @Column({ name: 'action_url', nullable: true })
   actionUrl?: string;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
-
-  @Column({ name: 'is_deleted', default: false, nullable: true })
-  isDeleted: boolean;
-
-  @Column()
-  userId: string;
+  @Column({ type: 'jsonb', default: {}, name: 'data' })
+  data: Record<string, any>;
 
   @ManyToOne(() => User, user => user.notifications, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

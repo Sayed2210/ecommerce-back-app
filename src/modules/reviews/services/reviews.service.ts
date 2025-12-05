@@ -62,9 +62,14 @@ export class ReviewsService {
         const review = await this.findOne(id);
 
         if (review.user.id !== userId) {
+            // Check if admin? Logic says "own reviews". 
+            // If admin wants to delete, we need role check. 
+            // For now, adhering to existing logic "only own reviews".
+            // If strict admin requirement, I should check roles.
             throw new ForbiddenException('You can only delete your own reviews');
         }
 
-        await this.reviewRepository.remove(review);
+        review.isActive = false;
+        await this.reviewRepository.save(review);
     }
 }

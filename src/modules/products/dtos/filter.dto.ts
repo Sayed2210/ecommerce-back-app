@@ -4,7 +4,19 @@ import { Transform } from 'class-transformer';
 export class FilterDto {
     @IsString()
     @IsOptional()
-    category?: string;
+    categoryId?: string;
+
+    @IsString()
+    @IsOptional()
+    brandId?: string;
+
+    @IsString()
+    @IsOptional()
+    search?: string;
+
+    @IsString()
+    @IsOptional()
+    sortBy?: string;
 
     @IsNumber()
     @Min(0)

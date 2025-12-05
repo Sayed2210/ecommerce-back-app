@@ -12,6 +12,9 @@ import { OrdersService } from '../services/orders.service';
 import { OrderStatus } from '../entities/order.entity';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
 
 /**
  * Orders Controller
@@ -52,13 +55,15 @@ export class OrdersController {
      * Update order status (Admin only)
      */
     @Patch(':id/status')
+    @UseGuards(RolesGuard)
+    @Roles(UserRole.ADMIN)
     async updateStatus(
         @Param('id') id: string,
         @Body('status') status: OrderStatus
     ) {
         return this.ordersService.updateStatus(id, status);
     }
-
+    // ... (skip unchanged)
     /**
      * Get order analytics (Admin only)
      */

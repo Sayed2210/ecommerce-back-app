@@ -41,8 +41,8 @@ export class AddressesService {
         });
     }
 
-    async update(id: string, userId: string, dto: AddressDto) {
-        await this.findOne(id, userId);
+    async update(userId: string, id: string, dto: AddressDto) {
+        const address = await this.findOne(id, userId);
 
         if (dto.isDefault) {
             await this.addressRepository.update(
@@ -51,11 +51,24 @@ export class AddressesService {
             );
         }
 
-        return this.addressRepository.update(id, dto);
+        Object.assign(address, dto);
+        return this.addressRepository.save(address);
     }
 
-    async remove(id: string, userId: string) {
+    async setDefault(userId: string, id: string) {
         await this.findOne(id, userId);
-        return this.addressRepository.softDelete(id);
+
+        await this.addressRepository.update(
+            { user: { id: userId }, isDefault: true },
+            { isDefault: false },
+        );
+
+        await this.addressRepository.update(id, { isDefault: true });
+        return this.findOne(id, userId);
+    }
+
+    async remove(userId: string, id: string) {
+        const address = await this.findOne(id, userId);
+        return this.addressRepository.remove(address);
     }
 }

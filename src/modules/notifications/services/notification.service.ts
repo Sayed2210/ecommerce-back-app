@@ -13,14 +13,18 @@ export class NotificationService {
     ) { }
 
     async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
-        const notification = this.notificationRepository.create(createNotificationDto);
+        const notification = this.notificationRepository.create({
+            ...createNotificationDto,
+            data: createNotificationDto.metadata || {}, // Map metadata to data if needed
+            user: { id: createNotificationDto.userId },
+        });
         return this.notificationRepository.save(notification);
     }
 
     async findAll(userId: string, pagination: PaginationDto) {
         const { page = 1, limit = 10 } = pagination;
         const [data, total] = await this.notificationRepository.findAndCount({
-            where: { userId, isDeleted: false },
+            where: { user: { id: userId } },
             order: { createdAt: 'DESC' },
             skip: (page - 1) * limit,
             take: limit,
@@ -34,12 +38,21 @@ export class NotificationService {
         if (!notification) {
             throw new NotFoundException(`Notification with ID ${id} not found`);
         }
-        notification.isRead = true;
+        notification.readAt = new Date();
         return this.notificationRepository.save(notification);
     }
 
     async markAllAsRead(userId: string): Promise<void> {
-        await this.notificationRepository.update({ userId, isRead: false }, { isRead: true });
+        // TypeORM update with relation might require query builder or simple where id IN...
+        // Assuming simple update works on columns, but relation filter in update?
+        // update({ user: { id: userId }, readAt: IsNull() }, { readAt: new Date() })
+        // TypeORM update syntax: conditions, partialEntity.
+        await this.notificationRepository.createQueryBuilder()
+            .update(Notification)
+            .set({ readAt: new Date() })
+            .where('user_id = :userId', { userId })
+            .andWhere('read_at IS NULL')
+            .execute();
     }
 
     async remove(id: string): Promise<void> {
@@ -47,7 +60,6 @@ export class NotificationService {
         if (!notification) {
             throw new NotFoundException(`Notification with ID ${id} not found`);
         }
-        notification.isDeleted = true;
-        await this.notificationRepository.save(notification);
+        await this.notificationRepository.remove(notification);
     }
 }

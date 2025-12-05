@@ -8,7 +8,7 @@ import { UpdateProductDto } from '../dtos/update-product.dto';
 import { FilterDto } from '../dtos/filter.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { SlugUtil } from '../../../common/utils/slug.util';
-import { CacheService } from '../../../infrastructure/cache/redis.service';
+import { RedisService } from '../../../infrastructure/cache/redis.service';
 
 @Injectable()
 export class ProductsService {
@@ -16,7 +16,7 @@ export class ProductsService {
 
     constructor(
         private readonly productRepository: ProductRepository,
-        private readonly cacheService: CacheService,
+        private readonly cacheService: RedisService,
         @InjectRepository(Product)
         private readonly productRepo: Repository<Product>,
     ) { }
@@ -34,7 +34,7 @@ export class ProductsService {
             },
         });
 
-        await this.cacheService.del('products:all');
+        await this.cacheService.delete('products:all');
         return product;
     }
 
@@ -50,26 +50,25 @@ export class ProductsService {
             .leftJoinAndSelect('product.category', 'category')
             .leftJoinAndSelect('product.brand', 'brand')
             .leftJoinAndSelect('product.images', 'images')
-            .where('product.isActive = true')
-            .andWhere('product.deletedAt IS NULL');
+            .where('product.isActive = :isActive', { isActive: true });
 
         if (categoryId) {
-            query.andWhere('product.categoryId = :categoryId', { categoryId });
+            query.andWhere('product.category.id = :categoryId', { categoryId });
         }
 
         if (brandId) {
-            query.andWhere('product.brandId = :brandId', { brandId });
+            query.andWhere('product.brand.id = :brandId', { brandId });
         }
 
         if (minPrice || maxPrice) {
-            query.andWhere('product.price BETWEEN :minPrice AND :maxPrice', {
+            query.andWhere('product.basePrice BETWEEN :minPrice AND :maxPrice', {
                 minPrice: minPrice || 0,
                 maxPrice: maxPrice || 999999,
             });
         }
 
         if (search) {
-            query.andWhere('product.name ILIKE :search OR product.description ILIKE :search', {
+            query.andWhere('(product.name ILIKE :search OR product.description ILIKE :search)', {
                 search: `%${search}%`,
             });
         }
@@ -77,13 +76,13 @@ export class ProductsService {
         // Apply sorting
         switch (sortBy) {
             case 'price-asc':
-                query.orderBy('product.price', 'ASC');
+                query.orderBy('product.basePrice', 'ASC');
                 break;
             case 'price-desc':
-                query.orderBy('product.price', 'DESC');
+                query.orderBy('product.basePrice', 'DESC');
                 break;
             case 'rating':
-                query.orderBy('product.metadata->>"avgRating"', 'DESC');
+                query.orderBy("product.metadata->>'avgRating'", 'DESC');
                 break;
             case 'newest':
             default:
@@ -107,7 +106,7 @@ export class ProductsService {
 
         const product = await this.productRepo.findOne({
             where: { id, isActive: true },
-            relations: ['category', 'brand', 'variants', 'images', 'reviews', 'inventory'],
+            relations: ['category', 'brand', 'variants', 'images', 'reviews'],
         });
 
         if (!product) {
@@ -129,15 +128,15 @@ export class ProductsService {
     async update(id: string, dto: UpdateProductDto) {
         await this.findOne(id);
         const updated = await this.productRepository.update(id, dto);
-        await this.cacheService.del(`product:${id}`);
-        await this.cacheService.del('products:all');
+        await this.cacheService.delete(`product:${id}`);
+        await this.cacheService.delete('products:all');
         return updated;
     }
 
     async remove(id: string) {
         await this.findOne(id);
-        await this.productRepository.softDelete(id);
-        await this.cacheService.del(`product:${id}`);
-        await this.cacheService.del('products:all');
+        await this.productRepository.update(id, { isActive: false });
+        await this.cacheService.delete(`product:${id}`);
+        await this.cacheService.delete('products:all');
     }
 }

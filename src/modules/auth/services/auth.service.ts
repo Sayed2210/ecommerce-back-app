@@ -29,7 +29,7 @@ export class AuthService {
         const hashedPassword = await this.passwordService.hash(dto.password);
         const user = await this.userRepository.create({
             ...dto,
-            password: hashedPassword,
+            passwordHash: hashedPassword,
         });
 
         const tokens = await this.tokenService.generateTokens(user.id);
@@ -47,7 +47,7 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const isPasswordValid = await this.passwordService.verify(dto.password, user.password);
+        const isPasswordValid = await this.passwordService.verify(dto.password, user.passwordHash);
         if (!isPasswordValid) {
             throw new UnauthorizedException('Invalid credentials');
         }
@@ -85,9 +85,9 @@ export class AuthService {
 
     async resetPassword(dto: ResetPasswordDto) {
         const payload = await this.tokenService.verifyResetToken(dto.token);
-        const hashedPassword = await this.passwordService.hash(dto.password);
+        const hashedPassword = await this.passwordService.hash(dto.newPassword);
 
-        await this.userRepository.update(payload.sub, { password: hashedPassword });
+        await this.userRepository.update(payload.sub, { passwordHash: hashedPassword });
         await this.tokenService.revokeResetToken(dto.token);
 
         return { message: 'Password reset successful' };
@@ -99,7 +99,7 @@ export class AuthService {
     }
 
     private sanitizeUser(user: any) {
-        const { password, ...result } = user;
+        const { passwordHash, ...result } = user;
         return result;
     }
 }

@@ -21,4 +21,6 @@ export class CartItem extends BaseEntity {
     @ManyToOne(() => ProductVariant, variant => variant.cartItems, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'variant_id' })
     variant?: ProductVariant;
+
+    totalPrice?: number;
 }

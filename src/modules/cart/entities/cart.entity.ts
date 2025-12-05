@@ -18,4 +18,6 @@ export class Cart extends BaseEntity {
 
     @OneToMany(() => CartItem, item => item.cart, { cascade: true })
     items: CartItem[];
+
+    subtotal?: number;
 }

@@ -1,27 +1,33 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum } from 'class-validator';
+import { AddressLabel } from '../entities/address.entity';
 
 export class AddressDto {
+    @IsEnum(AddressLabel)
+    @IsNotEmpty()
+    label: AddressLabel;
+
     @IsString()
     @IsNotEmpty()
-    street: string;
+    streetAddress: string;
 
     @IsString()
     @IsNotEmpty()
     city: string;
 
     @IsString()
-    @IsNotEmpty()
-    state: string;
-
-    @IsString()
-    @IsNotEmpty()
-    zipCode: string;
+    @IsOptional()
+    state?: string;
 
     @IsString()
     @IsNotEmpty()
     country: string;
 
+    @IsString()
+    @IsNotEmpty()
+    postalCode: string;
+
     @IsBoolean()
     @IsOptional()
     isDefault?: boolean;
 }
+
