@@ -2,13 +2,22 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { subDays } from 'date-fns';
+
+export interface DashboardStats {
+  sales: any[];
+  topProducts: any[];
+  categoryStats: any[];
+  userStats: any;
+  summary: { totalRevenue: number; totalOrders: number; avgOrderValue: number };
+}
+
 @Injectable()
 export class DashboardService {
   constructor(
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
-  async getDashboardStats(timeRange: '7d' | '30d' | '90d' | '1y'): Promise<DashboardStats> {
+  async getStats(timeRange: '7d' | '30d' | '90d' | '1y' = '30d'): Promise<DashboardStats> {
     const days = this.getDaysFromRange(timeRange);
     const startDate = subDays(new Date(), days);
 
@@ -75,38 +84,6 @@ export class DashboardService {
         totalOrders: salesStats.reduce((sum, day) => sum + parseInt(day.orders), 0),
         avgOrderValue: salesStats.reduce((sum, day) => sum + parseFloat(day.avgordervalue), 0) / salesStats.length,
       },
-    };
-  }
-
-  async getRealTimeMetrics(): Promise<RealTimeMetrics> {
-    // Current active users (Redis)
-    const activeUsers = await this.redisService.get('active_users:count');
-    
-    // Orders in the last hour
-    const recentOrders = await this.orderRepository.count({
-      where: {
-        createdAt: Between(subHours(new Date(), 1), new Date()),
-      },
-    });
-
-    // Low stock products
-    const lowStockProducts = await this.productRepository.count({
-      where: {
-        trackInventory: true,
-        inventoryQuantity: LessThan(10),
-      },
-    });
-
-    // Pending orders
-    const pendingOrders = await this.orderRepository.count({
-      where: { status: 'pending' },
-    });
-
-    return {
-      activeUsers: parseInt(activeUsers) || 0,
-      recentOrders,
-      lowStockProducts,
-      pendingOrders,
     };
   }
 

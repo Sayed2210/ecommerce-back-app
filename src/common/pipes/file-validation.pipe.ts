@@ -1,4 +1,7 @@
 // src/common/pipes/validation.pipe.ts
+import { Injectable, PipeTransform, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import * as Joi from 'joi';
+
 @Injectable()
 export class ValidationPipe implements PipeTransform<any> {
     async transform(value: any, metadata: ArgumentMetadata) {

@@ -11,6 +11,7 @@ import {
     HttpCode,
     HttpStatus
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from '../services/products.service';
 import { CreateProductDto } from '../dtos/create-product.dto';
 import { UpdateProductDto } from '../dtos/update-product.dto';
@@ -25,6 +26,7 @@ import { UserRole } from '../../auth/entities/user.entity';
  * Products Controller
  * Manages product catalog, filtering, and CRUD operations
  */
+@ApiTags('Products')
 @Controller('products')
 export class ProductsController {
     constructor(private readonly productsService: ProductsService) { }
@@ -33,6 +35,8 @@ export class ProductsController {
      * Get all products with filtering and pagination
      */
     @Get()
+    @ApiOperation({ summary: 'Get all products', description: 'Get product list with filters and pagination' })
+    @ApiResponse({ status: 200, description: 'Product list retrieved' })
     async findAll(
         @Query() filters: FilterDto,
         @Query() pagination: PaginationDto
@@ -44,6 +48,9 @@ export class ProductsController {
      * Get product details by ID
      */
     @Get(':id')
+    @ApiOperation({ summary: 'Get product details', description: 'Get detailed information about a product' })
+    @ApiResponse({ status: 200, description: 'Product found' })
+    @ApiResponse({ status: 404, description: 'Product not found' })
     async findOne(@Param('id') id: string) {
         return this.productsService.findOne(id);
     }
@@ -54,7 +61,11 @@ export class ProductsController {
     @Post()
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
     @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({ summary: 'Create product', description: 'Create a new product (Admin only)' })
+    @ApiResponse({ status: 201, description: 'Product created' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     async create(@Body() createProductDto: CreateProductDto) {
         return this.productsService.create(createProductDto);
     }
@@ -65,6 +76,11 @@ export class ProductsController {
     @Patch(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update product', description: 'Update product details (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Product updated' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+    @ApiResponse({ status: 404, description: 'Product not found' })
     async update(
         @Param('id') id: string,
         @Body() updateProductDto: UpdateProductDto
@@ -78,7 +94,12 @@ export class ProductsController {
     @Delete(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
     @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete product', description: 'Delete a product (Admin only)' })
+    @ApiResponse({ status: 204, description: 'Product deleted' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+    @ApiResponse({ status: 404, description: 'Product not found' })
     async remove(@Param('id') id: string) {
         await this.productsService.remove(id);
     }

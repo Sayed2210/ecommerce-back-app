@@ -11,6 +11,6 @@ import { UserRepository } from './repositories/user.repository';
     imports: [TypeOrmModule.forFeature([User, Address])],
     controllers: [UsersController],
     providers: [UsersService, UserRepository],
-    exports: [UsersService, UserRepository],
+    exports: [UsersService, UserRepository, TypeOrmModule], // Export TypeOrmModule to allow access to Address entity
 })
 export class UsersModule { }

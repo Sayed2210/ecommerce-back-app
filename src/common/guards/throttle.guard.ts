@@ -1,12 +1,16 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
-import { RedisService } from '@common/services/redis.service';
+// import { RedisService } from '@common/services/redis.service';
 
 @Injectable()
 export class ThrottleGuard implements CanActivate {
-  constructor(private readonly redisService: RedisService) { }
+  // constructor(private readonly redisService: RedisService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Temporarily disabled - RedisService not implemented
+    return true;
+
+    /* Original implementation:
     const request = context.switchToHttp().getRequest();
     const ip = this.getIP(request);
     const key = `throttle:${ip}:${request.route.path}`;
@@ -28,9 +32,10 @@ export class ThrottleGuard implements CanActivate {
     }
 
     return true;
+    */
   }
 
-  private getIP(request: Request): string {
+  private getIP(request: any): string {
     return (
       request.headers['x-forwarded-for']?.toString().split(',')[0] ||
       request.socket.remoteAddress ||
