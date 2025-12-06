@@ -183,13 +183,7 @@ export class BullmqService implements OnModuleInit, OnModuleDestroy {
     /**
      * Get job counts for queue
      */
-    async getJobCounts(queueName: string): Promise<{
-        waiting: number;
-        active: number;
-        completed: number;
-        failed: number;
-        delayed: number;
-    }> {
+    async getJobCounts(queueName: string): Promise<any> {
         const queue = this.getOrCreateQueue(queueName);
         return queue.getJobCounts();
     }

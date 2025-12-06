@@ -92,9 +92,9 @@ export class Order extends BaseEntity {
     @OneToMany(() => OrderItem, item => item.order, { cascade: true })
     items: OrderItem[];
 
-    // @OneToMany(() => Payment, payment => payment.order, { cascade: true })
-    // payments: Payment[];
+    @OneToMany(() => Payment, payment => payment.order, { cascade: true })
+    payments: Payment[];
 
-    // @OneToMany(() => Shipping, shipping => shipping.order, { cascade: true })
-    // shippings: Shipping[];
+    @OneToMany(() => Shipping, shipping => shipping.order, { cascade: true })
+    shippings: Shipping[];
 }

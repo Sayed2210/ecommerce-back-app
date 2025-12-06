@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { CheckoutService } from '../services/checkout.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CreateOrderDto } from '../dtos/create-order.dto';
+import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
 
 /**
  * Checkout Controller
@@ -28,7 +30,7 @@ export class CheckoutController {
         @Request() req,
         @Body() checkoutData: any
     ) {
-        return this.checkoutService.validate(req.user.id, checkoutData);
+        return this.checkoutService.validateCheckout(req.user.id, checkoutData);
     }
 
     /**
@@ -38,7 +40,7 @@ export class CheckoutController {
     @HttpCode(HttpStatus.CREATED)
     async createOrder(
         @Request() req,
-        @Body() orderData: any
+        @Body() orderData: CreateOrderDto
     ) {
         return this.checkoutService.createOrder(req.user.id, orderData);
     }
@@ -52,6 +54,8 @@ export class CheckoutController {
         @Request() req,
         @Body('code') code: string
     ) {
-        return this.checkoutService.applyCoupon(req.user.id, code);
+        const dto = new ApplyCouponDto();
+        dto.code = code;
+        return this.checkoutService.applyCoupon(dto);
     }
 }

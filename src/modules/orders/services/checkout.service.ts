@@ -7,7 +7,7 @@ import { Cart } from '../../cart/entities/cart.entity';
 import { CartItem } from '../../cart/entities/cart-item.entity';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
-import { Coupon } from '../entities/coupon.entity';
+import { Coupon, CouponType } from '../entities/coupon.entity';
 import { OrderStatus } from '../entities/order.entity';
 import { PaymentService } from './payment.service';
 import { ShippingService } from './shipping.service';
@@ -27,7 +27,35 @@ export class CheckoutService {
         private readonly couponRepository: Repository<Coupon>,
     ) { }
 
-    async processCheckout(userId: string, dto: CreateOrderDto) {
+    async validateCheckout(userId: string, orderData: any) {
+        // Simple validation logic reusing parts of createOrder or just checking prerequisites
+        // For now, checks if cart exists and is not empty as a basic validation
+        const cart = await this.dataSource.manager.findOne(Cart, {
+            where: { user: { id: userId } },
+            relations: ['items', 'items.variant', 'items.variant.product'],
+        });
+
+        if (!cart || cart.items.length === 0) {
+            throw new BadRequestException('Cart is empty');
+        }
+
+        // Check inventory
+        const errors = [];
+        for (const item of cart.items) {
+            const available = item.variant.inventoryQuantity - item.variant.reservedQuantity;
+            if (item.quantity > available) {
+                errors.push(`Insufficient stock for ${item.variant.product.name}`);
+            }
+        }
+
+        if (errors.length > 0) {
+            return { valid: false, errors };
+        }
+
+        return { valid: true, message: 'Checkout data is valid' };
+    }
+
+    async createOrder(userId: string, dto: CreateOrderDto) {
         return this.dataSource.transaction(async (manager) => {
             // Get cart
             const cart = await manager.findOne(Cart, {
@@ -74,12 +102,12 @@ export class CheckoutService {
                 }
 
                 // Simplified discount logic assuming percentage for now or reusing value directly
-                if (coupon.type === 'percentage') {
+                if (coupon.type === CouponType.PERCENTAGE) {
                     discount = (subtotal * (coupon.value || 0)) / 100;
                     if (coupon.maxDiscount) {
                         discount = Math.min(discount, coupon.maxDiscount);
                     }
-                } else if (coupon.type === 'fixed') {
+                } else if (coupon.type === CouponType.FIXED) {
                     discount = Math.min(coupon.value || 0, subtotal);
                 }
 

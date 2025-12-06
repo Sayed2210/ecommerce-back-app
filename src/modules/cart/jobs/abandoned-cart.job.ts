@@ -29,7 +29,7 @@ export class AbandonedCartProcessor extends WorkerHost {
     }
 
     async handleAbandonedCart(job: Job<{ cartId: string }>) {
-        const cart = await this.cartRepository.findOne({
+        const cart = await this.cartRepository.findOneWithOptions({
             where: { id: job.data.cartId },
             relations: ['user', 'items', 'items.product'],
         });
@@ -41,7 +41,7 @@ export class AbandonedCartProcessor extends WorkerHost {
         if (hoursSinceUpdate < 24) return;
 
         // Check if user has completed an order since
-        const recentOrder = await this.orderRepository.findOne({
+        const recentOrder = await this.orderRepository.findOneWithOptions({
             where: {
                 user: { id: cart.user.id },
                 createdAt: MoreThan(subHours(new Date(), 24)),
@@ -51,11 +51,11 @@ export class AbandonedCartProcessor extends WorkerHost {
         if (recentOrder) return;
 
         // Send reminder email
-        await this.mailerService.sendAbandonedCartEmail(cart.user.email, {
-            userName: cart.user.firstName,
+        await this.mailerService.sendAbandonedCartReminder(cart.user.email, {
+            name: cart.user.firstName,
             cartItems: cart.items,
             cartTotal: cart.subtotal,
-            recoveryLink: `${process.env.FRONTEND_URL}/cart?recovery=${cart.id}`,
+            recoveryUrl: `${process.env.FRONTEND_URL}/cart?recovery=${cart.id}`,
         });
 
         return { status: 'sent', cartId: cart.id };
@@ -63,7 +63,7 @@ export class AbandonedCartProcessor extends WorkerHost {
 
     async handleFollowUp(job: Job<{ cartId: string }>) {
         // Implementation for follow-up email
-        const cart = await this.cartRepository.findOne({
+        const cart = await this.cartRepository.findOneWithOptions({
             where: { id: job.data.cartId },
             relations: ['user', 'items', 'items.product'],
         });
@@ -71,7 +71,7 @@ export class AbandonedCartProcessor extends WorkerHost {
         if (!cart || cart.items.length === 0) return;
 
         // Check if user completed order
-        const recentOrder = await this.orderRepository.findOne({
+        const recentOrder = await this.orderRepository.findOneWithOptions({
             where: {
                 user: { id: cart.user.id },
                 createdAt: MoreThan(subHours(new Date(), 48)),

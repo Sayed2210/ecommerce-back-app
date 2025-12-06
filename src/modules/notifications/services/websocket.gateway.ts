@@ -1,5 +1,5 @@
-import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketServer } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
 import { NotificationService } from '../services/notification.service';
 import { JwtService } from '@nestjs/jwt';
 import { NotificationDto } from '../dto/notification.dto';
@@ -11,6 +11,9 @@ import { NotificationDto } from '../dto/notification.dto';
   },
 })
 export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
   constructor(
     private notificationService: NotificationService,
     private jwtService: JwtService,

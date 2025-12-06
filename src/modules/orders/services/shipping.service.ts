@@ -54,7 +54,7 @@ export class ShippingService {
             address,
             cost,
             trackingNumber,
-            status: 'pending',
+            status: ShippingStatus.PENDING,
         });
     }
 
