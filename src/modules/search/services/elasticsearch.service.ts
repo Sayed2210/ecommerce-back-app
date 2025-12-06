@@ -19,11 +19,12 @@ export class ElasticsearchService {
     private readonly client: Client;
 
     constructor(private configService: ConfigService) {
+        const node = configService.get('ELASTICSEARCH_NODE') || 'http://localhost:9200';
+        const apiKey = configService.get('ELASTICSEARCH_API_KEY');
+
         this.client = new Client({
-            node: configService.get('ELASTICSEARCH_NODE'),
-            auth: {
-                apiKey: configService.get('ELASTICSEARCH_API_KEY'),
-            },
+            node,
+            ...(apiKey && { auth: { apiKey } }),
         });
     }
 

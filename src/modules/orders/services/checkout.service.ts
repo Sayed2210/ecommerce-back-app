@@ -13,6 +13,7 @@ import { PaymentService } from './payment.service';
 import { ShippingService } from './shipping.service';
 import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { PaymentGateway } from '../entities';
 
 @Injectable()
 export class CheckoutService {
@@ -171,13 +172,13 @@ export class CheckoutService {
 
             // Process payment
             let paymentResult;
-            if (dto.paymentMethod === 'stripe') {
+            if (dto.paymentMethod === PaymentGateway.STRIPE) {
                 paymentResult = await this.paymentService.createPaymentIntent(
                     savedOrder.id,
                     totalAmount,
                     dto.paymentToken
                 );
-            } else if (dto.paymentMethod === 'cod') {
+            } else if (dto.paymentMethod === PaymentGateway.CASH_ON_DELIVERY) {
                 paymentResult = { status: 'pending', message: 'Cash on delivery' };
             }
 

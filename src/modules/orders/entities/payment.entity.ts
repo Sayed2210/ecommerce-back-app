@@ -6,6 +6,7 @@ import { Order } from './order.entity';
 export enum PaymentGateway {
     STRIPE = 'stripe',
     PAYPAL = 'paypal',
+    CASH_ON_DELIVERY = 'cash_on_delivery',
 }
 
 @Entity('payments')
