@@ -27,6 +27,8 @@ export class CreateNotificationDto {
     userId: string;
 }
 
+export class NotificationDto extends CreateNotificationDto { }
+
 export class UpdateNotificationDto {
     @IsBoolean()
     @IsOptional()

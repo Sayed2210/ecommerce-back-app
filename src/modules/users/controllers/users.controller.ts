@@ -11,6 +11,7 @@ import {
     HttpCode,
     HttpStatus
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
@@ -23,6 +24,8 @@ import { UserRole } from '../../auth/entities/user.entity';
  * Users Controller
  * Manages user profiles, accounts, and user-related operations
  */
+@ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
@@ -34,6 +37,9 @@ export class UsersController {
     @Get()
     @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
+    @ApiOperation({ summary: 'Get all users', description: 'Get all users (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Users retrieved' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     async findAll(@Query() pagination: PaginationDto) {
         return this.usersService.findAll(pagination);
     }
@@ -42,6 +48,8 @@ export class UsersController {
      * Get current user profile
      */
     @Get('me')
+    @ApiOperation({ summary: 'Get current user', description: 'Get authenticated user profile' })
+    @ApiResponse({ status: 200, description: 'User profile retrieved' })
     async getCurrentUser(@Request() req) {
         return this.usersService.findOne(req.user.id);
     }

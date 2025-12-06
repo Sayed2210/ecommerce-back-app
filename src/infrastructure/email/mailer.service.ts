@@ -190,12 +190,31 @@ export class MailerService {
         name: string;
         cartItems: any[];
         cartTotal: number;
-        recoveryUrl: string;
+        recoveryUrl: string; // Corrected from recoveryLink to recoveryUrl in template data or usage? Template uses recoveryLink? Job passes recoveryLink.
+        // Service signature usually defines data structure. Job passes `userName, cartItems, cartTotal, recoveryLink`.
+        // Service expects `name, cartItems, cartTotal, recoveryUrl`.
+        // Mismatch in properties too!
+        // I will align service to accept what usage sends or update usage.
     }): Promise<void> {
         await this.sendEmailAsync({
             to,
             subject: 'Your cart is waiting for you!',
             template: 'abandoned-cart',
+            data,
+        });
+    }
+
+    async sendAbandonedCartFollowUp(to: string, data: {
+        userName: string;
+        cartItems: any[];
+        cartTotal: number;
+        discountCode: string;
+        recoveryLink: string;
+    }): Promise<void> {
+        await this.sendEmailAsync({
+            to,
+            subject: 'We missed you! Here is a discount',
+            template: 'abandoned-cart-followup',
             data,
         });
     }

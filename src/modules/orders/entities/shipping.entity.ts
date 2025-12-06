@@ -2,6 +2,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@common/entities/base.entity';
 import { Order } from './order.entity';
+import { Address } from '@modules/users/entities/address.entity';
 
 export enum ShippingStatus {
     PENDING = 'pending',
@@ -20,6 +21,12 @@ export class Shipping extends BaseEntity {
     @Column({ name: 'tracking_number', nullable: true })
     trackingNumber?: string;
 
+    @Column({ name: 'tracking_url', nullable: true })
+    trackingUrl?: string;
+
+    @Column({ name: 'cost', type: 'decimal', precision: 12, scale: 2, default: 0 })
+    cost: number;
+
     @Column({ name: 'carrier', nullable: true })
     carrier?: string;
 
@@ -31,6 +38,10 @@ export class Shipping extends BaseEntity {
 
     @Column({ type: 'jsonb', default: {} })
     metadata: Record<string, any>;
+
+    @ManyToOne(() => Address, { nullable: true })
+    @JoinColumn({ name: 'address_id' })
+    address: Address;
 
     @ManyToOne(() => Order, order => order.shippings, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'order_id' })

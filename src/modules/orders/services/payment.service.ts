@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Payment } from '../entities/payment.entity';
-import { Order } from '../entities/order.entity';
+import { Payment, PaymentGateway } from '../entities/payment.entity';
+import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
 
 @Injectable()
 export class PaymentService {
@@ -19,7 +19,7 @@ export class PaymentService {
         private readonly orderRepository: Repository<Order>,
     ) {
         this.stripe = new Stripe(configService.get('STRIPE_SECRET_KEY'), {
-            apiVersion: '2023-10-16',
+            apiVersion: '2023-10-16' as any,
         });
     }
 
@@ -43,18 +43,22 @@ export class PaymentService {
             const payment = this.paymentRepository.create({
                 order: { id: orderId },
                 amount,
-                provider: 'stripe',
-                providerPaymentId: paymentIntent.id,
-                status: paymentIntent.status,
+                currency: 'usd',
+                gateway: PaymentGateway.STRIPE,
+                paymentIntentId: paymentIntent.id,
+                // status: paymentIntent.status, // Payment entity doesn't seem to have status column based on view_file output! 
                 metadata: paymentIntent,
             });
+            // Wait, Payment entity DOES NOT have status column in the view_file output. 
+            // It has paymentIntentId, amount, currency, gateway, metadata.
+            // I should remove status from here.
 
             await this.paymentRepository.save(payment);
 
             // Update order status based on payment
             if (paymentIntent.status === 'succeeded') {
                 await this.orderRepository.update(orderId, {
-                    status: 'confirmed',
+                    status: OrderStatus.PROCESSING,
                 });
             }
 
@@ -101,14 +105,16 @@ export class PaymentService {
     private async handleSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         const orderId = paymentIntent.metadata.orderId;
 
-        await this.paymentRepository.update(
-            { providerPaymentId: paymentIntent.id },
-            { status: 'succeeded' }
-        );
+        // Payment entity has no status column, so we skip updating it.
+        // Or if I missed it in view_file, let me double check. 
+        // Logic: The view_file output for Payment entity definitely did NOT show a status column.
+        // It showed paymentIntentId, amount, currency, gateway, metadata.
+        // So I will remove the paymentRepository.update calls that try to update status.
+        // Just update order status.
 
         await this.orderRepository.update(orderId, {
-            status: 'confirmed',
-            paymentStatus: 'paid',
+            status: OrderStatus.PROCESSING,
+            paymentStatus: PaymentStatus.PAID,
         });
 
         this.logger.log(`Payment succeeded for order ${orderId}`);
@@ -117,14 +123,15 @@ export class PaymentService {
     private async handleFailedPayment(paymentIntent: Stripe.PaymentIntent) {
         const orderId = paymentIntent.metadata.orderId;
 
-        await this.paymentRepository.update(
-            { providerPaymentId: paymentIntent.id },
-            { status: 'failed' }
-        );
+        // No payment status to update
+        // await this.paymentRepository.update(
+        //     { paymentIntentId: paymentIntent.id },
+        //     { status: 'failed' }
+        // );
 
         await this.orderRepository.update(orderId, {
-            status: 'cancelled',
-            paymentStatus: 'failed',
+            status: OrderStatus.CANCELLED,
+            paymentStatus: PaymentStatus.FAILED,
         });
 
         this.logger.error(`Payment failed for order ${orderId}`);

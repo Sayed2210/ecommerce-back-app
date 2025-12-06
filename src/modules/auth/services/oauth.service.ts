@@ -130,9 +130,9 @@ export class OAuthService {
                 email,
                 firstName: profile.given_name || profile.first_name,
                 lastName: profile.family_name || profile.last_name,
-                avatar: profile.picture?.data?.url || profile.picture,
+                avatarUrl: profile.picture?.data?.url || profile.picture,
                 isEmailVerified: true,
-                oauthProviders: [{ provider: provider as OAuthProviderType, providerId: profile.sub || profile.id }],
+                oauthProviders: [{ provider: provider as OAuthProviderType, providerUserId: profile.sub || profile.id }],
             });
         }
 

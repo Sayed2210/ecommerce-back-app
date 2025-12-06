@@ -2,8 +2,8 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ProductVariant } from '../entities/product-variant.entity';
-import { InventoryLog } from '../entities/inventory-log.entity';
-import { QueueService } from '../../../infrastructure/queue/bullmq.service';
+import { InventoryLog, InventoryReason } from '../entities/inventory-log.entity';
+import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 
 @Injectable()
 export class InventoryService {
@@ -15,20 +15,21 @@ export class InventoryService {
         @InjectRepository(InventoryLog)
         private readonly inventoryLogRepository: Repository<InventoryLog>,
         private readonly dataSource: DataSource,
-        private readonly queueService: QueueService,
+        private readonly queueService: BullmqService,
     ) { }
 
     async getInventory(variantId: string) {
         return this.variantRepository.findOne({
             where: { id: variantId },
-            select: ['id', 'sku', 'quantity', 'reservedQuantity', 'lowStockThreshold'],
+            select: ['id', 'sku', 'inventoryQuantity', 'reservedQuantity', 'lowStockThreshold'],
         });
     }
 
-    async adjustInventory(variantId: string, quantity: number, reason: string, userId?: string) {
+    async adjustInventory(variantId: string, quantity: number, reason: InventoryReason, userId?: string) {
         return this.dataSource.transaction(async (manager) => {
             const variant = await manager.findOne(ProductVariant, {
                 where: { id: variantId },
+                relations: ['product'],
                 lock: { mode: 'pessimistic_write' },
             });
 
@@ -36,10 +37,10 @@ export class InventoryService {
                 throw new BadRequestException('Product variant not found');
             }
 
-            const oldQuantity = variant.quantity;
-            variant.quantity += quantity;
+            const oldQuantity = variant.inventoryQuantity;
+            variant.inventoryQuantity += quantity;
 
-            if (variant.quantity < 0) {
+            if (variant.inventoryQuantity < 0) {
                 throw new BadRequestException('Insufficient inventory');
             }
 
@@ -48,19 +49,19 @@ export class InventoryService {
             // Create log entry
             const log = this.inventoryLogRepository.create({
                 variant: { id: variantId },
+                product: variant.product,
                 oldQuantity,
-                newQuantity: variant.quantity,
-                quantityChange: quantity,
+                newQuantity: variant.inventoryQuantity,
                 reason,
-                user: userId ? { id: userId } : null,
+                createdBy: userId ? { id: userId } : undefined,
             });
             await manager.save(log);
 
             // Check low stock
-            if (variant.quantity <= variant.lowStockThreshold) {
-                await this.queueService.addJob('low-stock-alert', {
+            if (variant.inventoryQuantity <= variant.lowStockThreshold) {
+                await this.queueService.addNotificationJob('low-stock-alert', {
                     variantId,
-                    currentStock: variant.quantity,
+                    currentStock: variant.inventoryQuantity,
                     threshold: variant.lowStockThreshold,
                 });
             }
@@ -76,7 +77,11 @@ export class InventoryService {
                 lock: { mode: 'pessimistic_write' },
             });
 
-            if (!variant || variant.quantity - variant.reservedQuantity < quantity) {
+            if (!variant) {
+                throw new BadRequestException('Product variant not found');
+            }
+
+            if (variant.inventoryQuantity - variant.reservedQuantity < quantity) {
                 throw new BadRequestException('Insufficient available inventory');
             }
 
