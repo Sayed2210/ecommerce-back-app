@@ -11,7 +11,7 @@ import {
     HttpCode,
     HttpStatus
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { ProductsService } from '../services/products.service';
 import { CreateProductDto } from '../dtos/create-product.dto';
 import { UpdateProductDto } from '../dtos/update-product.dto';
@@ -49,6 +49,7 @@ export class ProductsController {
      */
     @Get(':id')
     @ApiOperation({ summary: 'Get product details', description: 'Get detailed information about a product' })
+    @ApiParam({ name: 'id', description: 'Product ID', example: '123e4567-e89b-12d3-a456-426614174000' })
     @ApiResponse({ status: 200, description: 'Product found' })
     @ApiResponse({ status: 404, description: 'Product not found' })
     async findOne(@Param('id') id: string) {
@@ -64,6 +65,7 @@ export class ProductsController {
     @ApiBearerAuth()
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create product', description: 'Create a new product (Admin only)' })
+    @ApiBody({ type: CreateProductDto })
     @ApiResponse({ status: 201, description: 'Product created' })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     async create(@Body() createProductDto: CreateProductDto) {
@@ -78,6 +80,8 @@ export class ProductsController {
     @Roles(UserRole.ADMIN)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Update product', description: 'Update product details (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Product ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+    @ApiBody({ type: UpdateProductDto })
     @ApiResponse({ status: 200, description: 'Product updated' })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     @ApiResponse({ status: 404, description: 'Product not found' })
@@ -97,6 +101,7 @@ export class ProductsController {
     @ApiBearerAuth()
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete product', description: 'Delete a product (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Product ID', example: '123e4567-e89b-12d3-a456-426614174000' })
     @ApiResponse({ status: 204, description: 'Product deleted' })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     @ApiResponse({ status: 404, description: 'Product not found' })

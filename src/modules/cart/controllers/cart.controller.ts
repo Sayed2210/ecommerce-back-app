@@ -11,7 +11,7 @@ import {
     HttpCode,
     HttpStatus
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { CartService } from '../services/cart.service';
 import { AddCartItemDto } from '../dtos/add-cart-item.dto';
 import { UpdateCartItemDto } from '../dtos/update-cart-item.dto';
@@ -45,6 +45,7 @@ export class CartController {
     @UseGuards(JwtAuthGuard)
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Add cart item', description: 'Add product to cart' })
+    @ApiBody({ type: AddCartItemDto })
     @ApiResponse({ status: 201, description: 'Item added to cart' })
     @ApiResponse({ status: 400, description: 'Invalid product or insufficient stock' })
     async addItem(
@@ -61,6 +62,8 @@ export class CartController {
     @Patch('items/:id')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Update cart item', description: 'Update cart item quantity' })
+    @ApiParam({ name: 'id', description: 'Cart item ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+    @ApiBody({ type: UpdateCartItemDto })
     @ApiResponse({ status: 200, description: 'Cart item updated' })
     @ApiResponse({ status: 404, description: 'Cart item not found' })
     async updateItem(
@@ -77,6 +80,7 @@ export class CartController {
     @UseGuards(JwtAuthGuard)
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Remove cart item', description: 'Remove item from cart' })
+    @ApiParam({ name: 'id', description: 'Cart item ID', example: '123e4567-e89b-12d3-a456-426614174000' })
     @ApiResponse({ status: 204, description: 'Item removed' })
     @ApiResponse({ status: 404, description: 'Cart item not found' })
     async removeItem(@Param('id') id: string) {

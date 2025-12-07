@@ -11,7 +11,7 @@ import {
     HttpCode,
     HttpStatus
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
@@ -58,6 +58,9 @@ export class UsersController {
      * Update current user profile
      */
     @Patch('me')
+    @ApiOperation({ summary: 'Update profile', description: 'Update current user profile' })
+    @ApiBody({ type: UpdateProfileDto })
+    @ApiResponse({ status: 200, description: 'Profile updated successfully' })
     async updateProfile(
         @Request() req,
         @Body() updateProfileDto: UpdateProfileDto
@@ -69,6 +72,8 @@ export class UsersController {
      * Get current user's wishlist
      */
     @Get('me/wishlist')
+    @ApiOperation({ summary: 'Get wishlist', description: 'Get current user wishlist' })
+    @ApiResponse({ status: 200, description: 'Wishlist retrieved' })
     async getWishlist(@Request() req) {
         return this.usersService.getWishlist(req.user.id);
     }
@@ -80,6 +85,11 @@ export class UsersController {
     @Get(':id')
     @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
+    @ApiOperation({ summary: 'Get user by ID', description: 'Get user details by ID (Admin only)' })
+    @ApiParam({ name: 'id', description: 'User ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+    @ApiResponse({ status: 200, description: 'User found' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+    @ApiResponse({ status: 404, description: 'User not found' })
     async findOne(@Param('id') id: string) {
         return this.usersService.findOne(id);
     }
@@ -91,6 +101,11 @@ export class UsersController {
     @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete user', description: 'Delete user account (Admin only)' })
+    @ApiParam({ name: 'id', description: 'User ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+    @ApiResponse({ status: 204, description: 'User deleted' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+    @ApiResponse({ status: 404, description: 'User not found' })
     async remove(@Param('id') id: string) {
         await this.usersService.remove(id);
     }
