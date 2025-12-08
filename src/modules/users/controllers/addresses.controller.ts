@@ -99,5 +99,6 @@ export class AddressesController {
         @Param('id') id: string
     ) {
         await this.addressesService.remove(req.user.id, id);
+
     }
 }

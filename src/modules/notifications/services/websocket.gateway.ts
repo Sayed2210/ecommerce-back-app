@@ -30,7 +30,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   handleDisconnect(client: Socket) {
-    // Cleanup
+    client.leave(`user:${client.handshake.auth.userId}`);
   }
 
   @SubscribeMessage('markAsRead')
