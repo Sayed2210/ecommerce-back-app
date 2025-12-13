@@ -1,16 +1,23 @@
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { ValidateNested, IsObject } from 'class-validator';
+import { TranslatableString } from '@common/types/translatable.type';
 
 export class CategoryDto {
-    @ApiProperty({ example: 'Electronics', description: 'Category name' })
-    @IsString()
+    @ApiProperty({ example: { en: 'Electronics', ar: 'إلكترونيات' }, description: 'Category name' })
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TranslatableString)
     @IsNotEmpty()
-    name: string;
+    name: TranslatableString;
 
-    @ApiProperty({ example: 'Gadgets and devices', description: 'Category description', required: false })
-    @IsString()
+    @ApiProperty({ example: { en: 'Gadgets and devices', ar: 'أدوات وأجهزة' }, description: 'Category description', required: false })
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TranslatableString)
     @IsOptional()
-    description?: string;
+    description?: TranslatableString;
 
     @ApiProperty({ example: null, description: 'Parent Category ID', required: false })
     @IsString()

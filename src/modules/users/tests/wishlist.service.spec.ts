@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WishlistService } from '../services/wishlist.service';
 import { Wishlist } from '../entities/wishlist.entity';
 import { Product } from '../../products/entities/product.entity';
+import { ProductRepository } from '../../products/repositories/product.repository';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
@@ -21,20 +22,20 @@ const mockProductRepository = () => ({
 describe('WishlistService', () => {
     let service: WishlistService;
     let wishlistRepository: jest.Mocked<Repository<Wishlist>>;
-    let productRepository: jest.Mocked<Repository<Product>>;
+    let productRepository: Partial<Record<keyof ProductRepository, jest.Mock>>;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 WishlistService,
                 { provide: getRepositoryToken(Wishlist), useFactory: mockWishlistRepository },
-                { provide: getRepositoryToken(Product), useFactory: mockProductRepository },
+                { provide: ProductRepository, useFactory: mockProductRepository },
             ],
         }).compile();
 
         service = module.get<WishlistService>(WishlistService);
         wishlistRepository = module.get(getRepositoryToken(Wishlist));
-        productRepository = module.get(getRepositoryToken(Product));
+        productRepository = module.get(ProductRepository);
     });
 
     it('should be defined', () => {

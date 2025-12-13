@@ -14,13 +14,13 @@ export class CategoriesService {
 
     async create(dto: CategoryDto) {
         const existing = await this.categoryRepository.findOne({
-            where: { name: dto.name },
+            where: { name: dto.name as any },
         });
         if (existing) {
             throw new ConflictException('Category already exists');
         }
 
-        const slug = await SlugUtil.generateUniqueSlug(dto.name, this.categoryRepository);
+        const slug = await SlugUtil.generateUniqueSlug(dto.name.en, this.categoryRepository);
         return this.categoryRepository.save({ ...dto, slug });
     }
 

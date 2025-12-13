@@ -6,6 +6,7 @@ import { Cart } from '../entities/cart.entity';
 import { CartItem } from '../entities/cart-item.entity';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
 import { ProductRepository } from '../../products/repositories/product.repository';
+import { ProductVariantRepository } from '../../products/repositories/variant.repository';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { AddCartItemDto } from '../dtos/add-cart-item.dto';
 
@@ -51,7 +52,7 @@ describe('CartService', () => {
                 CartService,
                 { provide: getRepositoryToken(Cart), useValue: cartRepository },
                 { provide: getRepositoryToken(CartItem), useValue: cartItemRepository },
-                { provide: getRepositoryToken(ProductVariant), useValue: productVariantRepository },
+                { provide: ProductVariantRepository, useValue: productVariantRepository },
                 { provide: ProductRepository, useValue: productRepository },
                 { provide: RedisService, useValue: redisService },
                 { provide: NotificationsGateway, useValue: notificationsGateway },

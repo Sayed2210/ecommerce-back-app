@@ -2,23 +2,28 @@ import { IsString, IsNotEmpty, IsNumber, Min, IsOptional, IsArray, IsBoolean, Is
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { CreateVariantDto } from './variant.dto';
+import { TranslatableString } from '@common/types/translatable.type';
 
 export class CreateProductDto {
     @ApiProperty({
         description: 'Product name',
-        example: 'Wireless Bluetooth Headphones',
+        example: { en: 'Wireless Bluetooth Headphones', ar: 'سماعات بلوتوث لاسلكية' },
     })
-    @IsString()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TranslatableString)
     @IsNotEmpty()
-    name: string;
+    name: TranslatableString;
 
     @ApiProperty({
         description: 'Product description',
-        example: 'High-quality wireless headphones with noise cancellation',
+        example: { en: 'High-quality wireless headphones...', ar: 'سماعات عالية الجودة...' },
     })
-    @IsString()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TranslatableString)
     @IsNotEmpty()
-    description: string;
+    description: TranslatableString;
 
     @ApiProperty({
         description: 'Base price of the product',

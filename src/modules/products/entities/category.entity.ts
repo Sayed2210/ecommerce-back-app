@@ -9,11 +9,11 @@ export class Category extends BaseEntity {
     @Column({ unique: true })
     slug: string;
 
-    @Column()
-    name: string;
+    @Column({ type: 'jsonb' })
+    name: Record<string, any>;
 
-    @Column({ nullable: true })
-    description?: string;
+    @Column({ type: 'jsonb', nullable: true })
+    description?: Record<string, any>;
 
     @Column({ name: 'image_url', nullable: true })
     imageUrl?: string;

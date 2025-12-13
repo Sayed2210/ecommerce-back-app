@@ -13,18 +13,18 @@ import { InventoryLog } from './inventory-log.entity';
 @Entity('products')
 @Index(['slug', 'isActive', 'publishedAt'])
 export class Product extends BaseEntity {
-    @Column({ length: 500 })
-    @Index()
-    name: string;
+    @Column({ type: 'jsonb' })
+    @Index({ unique: false }) // Indexing jsonb might require specific strategy, keeping simple for now or removing if not needed for exact match
+    name: Record<string, any>;
 
     @Column({ length: 500, unique: true })
     slug: string;
 
-    @Column({ type: 'text', nullable: true })
-    description?: string;
+    @Column({ type: 'jsonb', nullable: true })
+    description?: Record<string, any>;
 
-    @Column({ name: 'short_description', nullable: true })
-    shortDescription?: string;
+    @Column({ name: 'short_description', type: 'jsonb', nullable: true })
+    shortDescription?: Record<string, any>;
 
     @ManyToOne(() => Brand, brand => brand.products, { nullable: true })
     @JoinColumn({ name: 'brand_id' })
@@ -61,14 +61,14 @@ export class Product extends BaseEntity {
     @Column({ type: 'jsonb', nullable: true })
     dimensions?: Record<string, any>;
 
-    @Column({ name: 'seo_title', nullable: true, length: 500 })
-    seoTitle?: string;
+    @Column({ name: 'seo_title', type: 'jsonb', nullable: true })
+    seoTitle?: Record<string, any>;
 
-    @Column({ name: 'seo_description', nullable: true, type: 'text' })
-    seoDescription?: string;
+    @Column({ name: 'seo_description', type: 'jsonb', nullable: true })
+    seoDescription?: Record<string, any>;
 
-    @Column({ name: 'seo_keywords', nullable: true, type: 'text' })
-    seoKeywords?: string;
+    @Column({ name: 'seo_keywords', type: 'jsonb', nullable: true })
+    seoKeywords?: Record<string, any>;
 
     @Column({ name: 'is_featured', default: false })
     isFeatured: boolean;

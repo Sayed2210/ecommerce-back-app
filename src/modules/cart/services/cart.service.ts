@@ -6,7 +6,7 @@ import { CartItem } from '../entities/cart-item.entity';
 import { AddCartItemDto } from '../dtos/add-cart-item.dto';
 import { UpdateCartItemDto } from '../dtos/update-cart-item.dto';
 import { ProductRepository } from '../../products/repositories/product.repository';
-import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { ProductVariantRepository } from '../../products/repositories/variant.repository';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { NotificationsGateway } from '../../notifications/services/websocket.gateway';
 
@@ -17,8 +17,7 @@ export class CartService {
         private cartRepository: Repository<Cart>,
         @InjectRepository(CartItem)
         private cartItemRepository: Repository<CartItem>,
-        @InjectRepository(ProductVariant)
-        private productVariantRepository: Repository<ProductVariant>,
+        private productVariantRepository: ProductVariantRepository,
         private readonly productRepository: ProductRepository,
         private readonly redisService: RedisService,
         private readonly notificationsGateway: NotificationsGateway,
@@ -63,7 +62,7 @@ export class CartService {
         let priceModifier = 0;
 
         if (itemDto.variantId) {
-            const variant = await this.productVariantRepository.findOne({ where: { id: itemDto.variantId } });
+            const variant = await this.productVariantRepository.findOne({ id: itemDto.variantId });
             if (!variant || variant.inventoryQuantity < itemDto.quantity) {
                 throw new BadRequestException('Insufficient stock for variant');
             }

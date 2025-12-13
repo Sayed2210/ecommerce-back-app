@@ -45,7 +45,7 @@ describe('CategoriesService', () => {
 
     describe('create', () => {
         it('should create category', async () => {
-            const dto = { name: 'Cat' };
+            const dto = { name: { en: 'Cat', ar: 'Cat' } };
             const result = { id: 'c1', ...dto };
             repository.create.mockReturnValue(result as any);
             repository.save.mockResolvedValue(result as any);
@@ -56,18 +56,18 @@ describe('CategoriesService', () => {
 
     describe('update', () => {
         it('should update category', async () => {
-            const existing = { id: 'c1', name: 'Old' };
-            const updated = { id: 'c1', name: 'New' };
+            const existing = { id: 'c1', name: { en: 'Old', ar: 'Old' } };
+            const updated = { id: 'c1', name: { en: 'New', ar: 'New' } };
             repository.findOne.mockResolvedValue(existing as any);
             repository.merge.mockReturnValue(updated as any);
             repository.save.mockResolvedValue(updated as any);
 
-            expect(await service.update('c1', { name: 'New' } as any)).toBe(updated);
+            expect(await service.update('c1', { name: { en: 'New', ar: 'New' } } as any)).toBe(updated);
         });
 
         it('should throw if not found', async () => {
             repository.findOne.mockResolvedValue(null);
-            await expect(service.update('c1', { name: 'New' })).rejects.toThrow(NotFoundException);
+            await expect(service.update('c1', { name: { en: 'New', ar: 'New' } })).rejects.toThrow(NotFoundException);
         });
     });
 });

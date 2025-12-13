@@ -1,14 +1,19 @@
 import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean, IsObject, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
+import { TranslatableString } from '@common/types/translatable.type';
 
 export class CreateVariantDto {
     @ApiProperty({
         description: 'Variant name (e.g., "Red - Large", "128GB")',
-        example: 'Black - Medium',
+        example: { en: 'Black - Medium', ar: 'أسود - متوسط' },
     })
-    @IsString()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TranslatableString)
     @IsNotEmpty()
-    variantName: string;
+    variantName: TranslatableString;
 
     @ApiProperty({
         description: 'Price modifier (positive or negative)',
@@ -92,12 +97,14 @@ export class CreateVariantDto {
 export class UpdateVariantDto {
     @ApiProperty({
         description: 'Variant name',
-        example: 'Black - Large',
+        example: { en: 'Black - Large', ar: 'أسود - كبير' },
         required: false,
     })
-    @IsString()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TranslatableString)
     @IsOptional()
-    variantName?: string;
+    variantName?: TranslatableString;
 
     @ApiProperty({
         description: 'Price modifier',
