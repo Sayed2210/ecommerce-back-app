@@ -5,11 +5,16 @@ import { Notification } from '../entities/notification.entity';
 import { CreateNotificationDto } from '../dto/notification.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
+import { NotificationsGateway } from './websocket.gateway';
+import { Inject, forwardRef } from '@nestjs/common';
+
 @Injectable()
 export class NotificationService {
     constructor(
         @InjectRepository(Notification)
         private readonly notificationRepository: Repository<Notification>,
+        @Inject(forwardRef(() => NotificationsGateway))
+        private readonly notificationsGateway: NotificationsGateway,
     ) { }
 
     async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
@@ -18,7 +23,12 @@ export class NotificationService {
             data: createNotificationDto.metadata || {}, // Map metadata to data if needed
             user: { id: createNotificationDto.userId },
         });
-        return this.notificationRepository.save(notification);
+        const savedNotification = await this.notificationRepository.save(notification);
+
+        // Emit real-time event
+        this.notificationsGateway.sendNotification(createNotificationDto.userId, savedNotification as any);
+
+        return savedNotification;
     }
 
     async findAll(userId: string, pagination: PaginationDto) {
