@@ -31,6 +31,7 @@ export class AuthController {
     @Post('register')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Register a new user', description: 'Create a new user account with email and password' })
+    @ApiBody({ type: RegisterDto })
     @ApiResponse({ status: 201, description: 'User successfully registered' })
     @ApiResponse({ status: 400, description: 'Invalid input or email already exists' })
     async register(@Body() registerDto: RegisterDto) {
@@ -43,6 +44,7 @@ export class AuthController {
     @Post('login')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'User login', description: 'Authenticate user with email and password' })
+    @ApiBody({ type: LoginDto })
     @ApiResponse({ status: 200, description: 'Login successful, returns access and refresh tokens' })
     @ApiResponse({ status: 401, description: 'Invalid credentials' })
     async login(@Body() loginDto: LoginDto) {
@@ -55,6 +57,7 @@ export class AuthController {
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Refresh access token', description: 'Get new access token using refresh token' })
+    @ApiBody({ type: RefreshTokenDto })
     @ApiResponse({ status: 200, description: 'New access token generated' })
     @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
     async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
@@ -67,6 +70,7 @@ export class AuthController {
     @Post('forgot-password')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Forgot password', description: 'Request password reset email' })
+    @ApiBody({ type: ForgotPasswordDto })
     @ApiResponse({ status: 200, description: 'Reset email sent if account exists' })
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
         return this.authService.forgotPassword(forgotPasswordDto);
@@ -78,6 +82,7 @@ export class AuthController {
     @Post('reset-password')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Reset password', description: 'Reset password using token from email' })
+    @ApiBody({ type: ResetPasswordDto })
     @ApiResponse({ status: 200, description: 'Password successfully reset' })
     @ApiResponse({ status: 400, description: 'Invalid or expired token' })
     async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
@@ -92,6 +97,7 @@ export class AuthController {
     @ApiBearerAuth()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Logout', description: 'Logout user and revoke refresh token' })
+    @ApiBody({ type: RefreshTokenDto })
     @ApiResponse({ status: 200, description: 'Successfully logged out' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async logout(@Body() refreshTokenDto: RefreshTokenDto) {

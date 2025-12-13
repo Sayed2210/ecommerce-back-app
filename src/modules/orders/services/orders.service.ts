@@ -68,18 +68,19 @@ export class OrdersService {
 
     // Validate status transition
     const validTransitions = {
-      [OrderStatus.PENDING]: [OrderStatus.PENDING, OrderStatus.CANCELLED, OrderStatus.PROCESSING],
-      [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED],
-      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED],
-      [OrderStatus.DELIVERED]: [],
-      [OrderStatus.CANCELLED]: [],
-      [OrderStatus.REFUNDED]: [],
+      [OrderStatus.PENDING]: [OrderStatus.PENDING],
+      [OrderStatus.PROCESSING]: [OrderStatus.PROCESSING],
+      [OrderStatus.SHIPPED]: [OrderStatus.SHIPPED],
+      [OrderStatus.DELIVERED]: [OrderStatus.DELIVERED],
+      [OrderStatus.CANCELLED]: [OrderStatus.CANCELLED],
+      [OrderStatus.REFUNDED]: [OrderStatus.REFUNDED],
     };
 
     if (validTransitions[order.status] && !validTransitions[order.status].includes(status)) {
       // Allow if admin force, but logic here seems to enforce flow.
       // Relaxing mismatch logic or keeping as is.
       // Keeping check but ensuring types match.
+      throw new BadRequestException('Invalid order status transition');
     }
 
     order.status = status;

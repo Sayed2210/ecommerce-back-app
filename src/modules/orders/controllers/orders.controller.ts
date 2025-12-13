@@ -8,7 +8,7 @@ import {
     UseGuards,
     Request
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { OrdersService } from '../services/orders.service';
 import { OrderStatus } from '../entities/order.entity';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
@@ -51,6 +51,7 @@ export class OrdersController {
      */
     @Get(':id')
     @ApiOperation({ summary: 'Get order details', description: 'Get detailed order information' })
+    @ApiParam({ name: 'id', description: 'Order ID', example: '123e4567-e89b-12d3-a456-426614174000' })
     @ApiResponse({ status: 200, description: 'Order found' })
     @ApiResponse({ status: 404, description: 'Order not found' })
     async findOne(
@@ -67,6 +68,7 @@ export class OrdersController {
     @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Update order status', description: 'Update order status (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Order ID', example: '123e4567-e89b-12d3-a456-426614174000' })
     @ApiResponse({ status: 200, description: 'Order status updated' })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     @ApiResponse({ status: 404, description: 'Order not found' })
