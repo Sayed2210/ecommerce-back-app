@@ -2,15 +2,15 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Wishlist } from '../entities/wishlist.entity';
-import { Product } from '../../products/entities/product.entity';
+import { ProductRepository } from '../../products/repositories/product.repository';
 
 @Injectable()
 export class WishlistService {
     constructor(
         @InjectRepository(Wishlist)
         private readonly wishlistRepository: Repository<Wishlist>,
-        @InjectRepository(Product)
-        private readonly productRepository: Repository<Product>,
+
+        private readonly productRepository: ProductRepository,
     ) { }
 
     async findAll(userId: string) {
@@ -30,7 +30,7 @@ export class WishlistService {
             throw new ConflictException('Product already in wishlist');
         }
 
-        const product = await this.productRepository.findOne({ where: { id: productId } });
+        const product = await this.productRepository.findOne({ id: productId });
         if (!product) {
             throw new NotFoundException('Product not found');
         }

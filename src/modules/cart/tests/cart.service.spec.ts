@@ -6,8 +6,11 @@ import { Cart } from '../entities/cart.entity';
 import { CartItem } from '../entities/cart-item.entity';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
 import { ProductRepository } from '../../products/repositories/product.repository';
+import { ProductVariantRepository } from '../../products/repositories/variant.repository';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { AddCartItemDto } from '../dtos/add-cart-item.dto';
+
+import { NotificationsGateway } from '../../notifications/services/websocket.gateway';
 
 describe('CartService', () => {
     let service: CartService;
@@ -16,6 +19,7 @@ describe('CartService', () => {
     let productVariantRepository: Record<string, jest.Mock>;
     let productRepository: Partial<Record<keyof ProductRepository, jest.Mock>>;
     let redisService: Partial<Record<keyof RedisService, jest.Mock>>;
+    let notificationsGateway: Record<string, jest.Mock>;
 
     beforeEach(async () => {
         cartRepository = {
@@ -39,15 +43,19 @@ describe('CartService', () => {
             get: jest.fn(),
             set: jest.fn(),
         };
+        notificationsGateway = {
+            sendCartUpdate: jest.fn(),
+        };
 
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 CartService,
                 { provide: getRepositoryToken(Cart), useValue: cartRepository },
                 { provide: getRepositoryToken(CartItem), useValue: cartItemRepository },
-                { provide: getRepositoryToken(ProductVariant), useValue: productVariantRepository },
+                { provide: ProductVariantRepository, useValue: productVariantRepository },
                 { provide: ProductRepository, useValue: productRepository },
                 { provide: RedisService, useValue: redisService },
+                { provide: NotificationsGateway, useValue: notificationsGateway },
             ],
         }).compile();
 
@@ -110,6 +118,13 @@ describe('CartService', () => {
 
     describe('removeItem', () => {
         it('should delete item', async () => {
+            const item = { id: 'i1', cart: { id: 'c1' }, product: { id: 'p1', basePrice: 100 }, quantity: 1 };
+            cartItemRepository.findOne.mockResolvedValue(item);
+            cartItemRepository.delete.mockResolvedValue({});
+            // Mock getCartWithTotals
+            const cart = { id: 'c1', items: [] };
+            cartRepository.findOne.mockResolvedValue(cart);
+
             await service.removeItem('i1');
             expect(cartItemRepository.delete).toHaveBeenCalledWith('i1');
         });

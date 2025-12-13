@@ -5,9 +5,12 @@ import { NotificationService } from '../services/notification.service';
 import { Notification, NotificationType } from '../entities/notification.entity';
 import { CreateNotificationDto } from '../dto/notification.dto';
 
+import { NotificationsGateway } from '../services/websocket.gateway';
+
 describe('NotificationService', () => {
     let service: NotificationService;
     let notificationRepository: Record<string, jest.Mock>;
+    let notificationsGateway: Record<string, jest.Mock>;
     let queryBuilder: any;
 
     beforeEach(async () => {
@@ -28,10 +31,15 @@ describe('NotificationService', () => {
             createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
         };
 
+        notificationsGateway = {
+            sendNotification: jest.fn(),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 NotificationService,
                 { provide: getRepositoryToken(Notification), useValue: notificationRepository },
+                { provide: NotificationsGateway, useValue: notificationsGateway },
             ],
         }).compile();
 
@@ -51,6 +59,7 @@ describe('NotificationService', () => {
 
             const result = await service.create(dto);
             expect(result).toBe(notification);
+            expect(notificationsGateway.sendNotification).toHaveBeenCalledWith('u1', notification);
         });
     });
 

@@ -22,7 +22,7 @@ export class ProductsService {
     ) { }
 
     async create(dto: CreateProductDto) {
-        const slug = await SlugUtil.generateUniqueSlug(dto.name, this.productRepo);
+        const slug = await SlugUtil.generateUniqueSlug(dto.name.en, this.productRepo);
 
         const { categoryId, brandId, images, ...productData } = dto;
 

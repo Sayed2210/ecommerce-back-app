@@ -66,7 +66,7 @@ describe('ProductsService', () => {
 
     describe('create', () => {
         it('should create a product and invalidate cache', async () => {
-            const dto: CreateProductDto = { name: 'Test Product', description: 'Desc', basePrice: 100, categoryId: '1', brandId: '1', images: [], inventoryQuantity: 10 };
+            const dto: CreateProductDto = { name: { en: 'Test Product', ar: 'Test Product' }, description: { en: 'Desc', ar: 'Desc' }, basePrice: 100, categoryId: '1', brandId: '1', images: [], inventoryQuantity: 10 };
             const product = { id: '1', ...dto, slug: 'test-product' };
 
             // Mock duplicate check in SlugUtil using productRepo.count
@@ -122,8 +122,8 @@ describe('ProductsService', () => {
 
     describe('update', () => {
         it('should update product and invalidate caches', async () => {
-            const product = { id: '1', name: 'Old' };
-            const updated = { id: '1', name: 'New' };
+            const product = { id: '1', name: { en: 'Old', ar: 'Old' } };
+            const updated = { id: '1', name: { en: 'New', ar: 'New' } };
 
             // service.update calls findOne first
             redisService.get.mockResolvedValue(null); // findOne cache miss
@@ -131,7 +131,7 @@ describe('ProductsService', () => {
             // then update
             productRepository.update.mockResolvedValue(updated);
 
-            await service.update('1', { name: 'New' });
+            await service.update('1', { name: { en: 'New', ar: 'New' } });
 
             expect(productRepository.update).toHaveBeenCalled();
             expect(redisService.delete).toHaveBeenCalledWith('product:1');

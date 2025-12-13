@@ -8,11 +8,11 @@ export class Brand extends BaseEntity {
     @Column({ unique: true })
     slug: string;
 
-    @Column({ unique: true })
-    name: string;
+    @Column({ type: 'jsonb', unique: true })
+    name: Record<string, any>;
 
-    @Column({ nullable: true })
-    description?: string;
+    @Column({ type: 'jsonb', nullable: true })
+    description?: Record<string, any>;
 
     @Column({ name: 'logo_url', nullable: true })
     logoUrl?: string;

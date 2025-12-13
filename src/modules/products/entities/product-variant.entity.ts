@@ -9,8 +9,8 @@ import { InventoryLog } from './inventory-log.entity';
 
 @Entity('product_variants')
 export class ProductVariant extends BaseEntity {
-    @Column({ name: 'variant_name' })
-    variantName: string;
+    @Column({ name: 'variant_name', type: 'jsonb' })
+    variantName: Record<string, any>;
 
     @Column({ name: 'price_modifier', type: 'decimal', precision: 12, scale: 2, default: 0 })
     priceModifier: number;

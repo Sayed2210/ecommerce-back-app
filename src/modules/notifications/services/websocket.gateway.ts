@@ -1,6 +1,6 @@
 import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { NotificationService } from '../services/notification.service';
+
 import { JwtService } from '@nestjs/jwt';
 import { NotificationDto } from '../dto/notification.dto';
 
@@ -15,7 +15,6 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   server: Server;
 
   constructor(
-    private notificationService: NotificationService,
     private jwtService: JwtService,
   ) { }
 
@@ -33,18 +32,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     client.leave(`user:${client.handshake.auth.userId}`);
   }
 
-  @SubscribeMessage('markAsRead')
-  async handleMarkAsRead(client: Socket, data: { notificationId: string }) {
-    const token = client.handshake.headers.authorization?.split(' ')[1];
-    const payload = this.jwtService.verify(token);
 
-    await this.notificationService.markAsRead(data.notificationId, payload.sub);
-
-    client.emit('notificationRead', { notificationId: data.notificationId });
-  }
 
   // Method to be called from other services
   sendNotification(userId: string, notification: NotificationDto) {
     this.server.to(`user:${userId}`).emit('newNotification', notification);
+  }
+
+  sendCartUpdate(userId: string, cart: any) {
+    this.server.to(`user:${userId}`).emit('cart_updated', cart);
   }
 }

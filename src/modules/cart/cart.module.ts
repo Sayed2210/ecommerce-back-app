@@ -8,10 +8,13 @@ import { CartItem } from './entities/cart-item.entity';
 import { ProductVariant } from '../products/entities/product-variant.entity';
 import { ProductsModule } from '../products/products.module';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Cart, CartItem, ProductVariant]),
+        TypeOrmModule.forFeature([Cart, CartItem]),
         ProductsModule,
+        NotificationsModule,
     ],
     controllers: [CartController],
     providers: [CartService, CartRepository],

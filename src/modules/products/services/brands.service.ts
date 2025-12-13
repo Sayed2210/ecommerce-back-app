@@ -13,12 +13,12 @@ export class BrandsService {
     ) { }
 
     async create(dto: BrandDto) {
-        const existing = await this.brandRepository.findOne({ where: { name: dto.name } });
+        const existing = await this.brandRepository.findOne({ where: { name: dto.name as any } });
         if (existing) {
             throw new ConflictException('Brand already exists');
         }
 
-        const slug = await SlugUtil.generateUniqueSlug(dto.name, this.brandRepository);
+        const slug = await SlugUtil.generateUniqueSlug(dto.name.en, this.brandRepository);
         return this.brandRepository.save({ ...dto, slug });
     }
 
@@ -37,7 +37,7 @@ export class BrandsService {
 
     async update(id: string, dto: BrandDto) {
         await this.findOne(id);
-        return this.brandRepository.update(id, dto);
+        return this.brandRepository.update(id, dto as any);
     }
 
     async remove(id: string) {

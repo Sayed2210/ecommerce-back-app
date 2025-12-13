@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Coupon } from '../entities/coupon.entity';
 import { Order } from '../entities/order.entity';
+import { CreateCouponDto, UpdateCouponDto } from '../dtos/create-coupon.dto';
 
 export interface CouponValidationResult {
     valid: boolean;
@@ -19,6 +20,48 @@ export class CouponService {
         @InjectRepository(Order)
         private orderRepository: Repository<Order>,
     ) { }
+
+    async create(createCouponDto: CreateCouponDto): Promise<Coupon> {
+        const { code } = createCouponDto;
+        const existing = await this.couponRepository.findOne({ where: { code: code.toUpperCase() } });
+        if (existing) {
+            throw new BadRequestException('Coupon code already exists');
+        }
+
+        const coupon = this.couponRepository.create({
+            ...createCouponDto,
+            code: code.toUpperCase(),
+        });
+
+        return this.couponRepository.save(coupon);
+    }
+
+    async findAll(): Promise<Coupon[]> {
+        return this.couponRepository.find({
+            order: { createdAt: 'DESC' },
+        });
+    }
+
+    async findOne(id: string): Promise<Coupon> {
+        const coupon = await this.couponRepository.findOne({ where: { id } });
+        if (!coupon) {
+            throw new NotFoundException('Coupon not found');
+        }
+        return coupon;
+    }
+
+    async update(id: string, updateCouponDto: UpdateCouponDto): Promise<Coupon> {
+        const coupon = await this.findOne(id);
+
+        Object.assign(coupon, updateCouponDto);
+
+        return this.couponRepository.save(coupon);
+    }
+
+    async remove(id: string): Promise<void> {
+        const coupon = await this.findOne(id);
+        await this.couponRepository.remove(coupon);
+    }
 
     async validateCoupon(code: string, userId: string, orderValue: number): Promise<CouponValidationResult> {
         const coupon = await this.couponRepository.findOne({ where: { code: code.toUpperCase() } });

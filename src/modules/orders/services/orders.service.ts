@@ -68,12 +68,12 @@ export class OrdersService {
 
     // Validate status transition
     const validTransitions = {
-      [OrderStatus.PENDING]: [OrderStatus.PENDING],
-      [OrderStatus.PROCESSING]: [OrderStatus.PROCESSING],
-      [OrderStatus.SHIPPED]: [OrderStatus.SHIPPED],
-      [OrderStatus.DELIVERED]: [OrderStatus.DELIVERED],
-      [OrderStatus.CANCELLED]: [OrderStatus.CANCELLED],
-      [OrderStatus.REFUNDED]: [OrderStatus.REFUNDED],
+      [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+      [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED],
+      [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
+      [OrderStatus.CANCELLED]: [],
+      [OrderStatus.REFUNDED]: [],
     };
 
     if (validTransitions[order.status] && !validTransitions[order.status].includes(status)) {

@@ -6,8 +6,9 @@ import { CartItem } from '../entities/cart-item.entity';
 import { AddCartItemDto } from '../dtos/add-cart-item.dto';
 import { UpdateCartItemDto } from '../dtos/update-cart-item.dto';
 import { ProductRepository } from '../../products/repositories/product.repository';
-import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { ProductVariantRepository } from '../../products/repositories/variant.repository';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
+import { NotificationsGateway } from '../../notifications/services/websocket.gateway';
 
 @Injectable()
 export class CartService {
@@ -16,10 +17,10 @@ export class CartService {
         private cartRepository: Repository<Cart>,
         @InjectRepository(CartItem)
         private cartItemRepository: Repository<CartItem>,
-        @InjectRepository(ProductVariant)
-        private productVariantRepository: Repository<ProductVariant>,
+        private productVariantRepository: ProductVariantRepository,
         private readonly productRepository: ProductRepository,
         private readonly redisService: RedisService,
+        private readonly notificationsGateway: NotificationsGateway,
     ) { }
 
     async getOrCreateCart(userId?: string, sessionId?: string): Promise<Cart> {
@@ -61,7 +62,7 @@ export class CartService {
         let priceModifier = 0;
 
         if (itemDto.variantId) {
-            const variant = await this.productVariantRepository.findOne({ where: { id: itemDto.variantId } });
+            const variant = await this.productVariantRepository.findOne({ id: itemDto.variantId });
             if (!variant || variant.inventoryQuantity < itemDto.quantity) {
                 throw new BadRequestException('Insufficient stock for variant');
             }
@@ -89,7 +90,15 @@ export class CartService {
             await this.cartItemRepository.save(newItem);
         }
 
-        return this.getCartWithTotals(cartId);
+        const updatedCart = await this.getCartWithTotals(cartId);
+
+        // Notify user if authenticated
+        // Assuming we can get userId from cart or passing it. Cart has user relation.
+        if (updatedCart.user?.id) {
+            this.notificationsGateway.sendCartUpdate(updatedCart.user.id, updatedCart);
+        }
+
+        return updatedCart;
     }
 
     async updateItem(id: string, dto: UpdateCartItemDto) {
@@ -99,15 +108,40 @@ export class CartService {
         item.quantity = dto.quantity;
         await this.cartItemRepository.save(item);
 
-        return this.getCartWithTotals(item.cart.id);
+        const updatedCart = await this.getCartWithTotals(item.cart.id);
+
+        if (updatedCart.user?.id) {
+            this.notificationsGateway.sendCartUpdate(updatedCart.user.id, updatedCart);
+        }
+
+        return updatedCart;
     }
 
     async removeItem(id: string) {
+        const item = await this.cartItemRepository.findOne({ where: { id }, relations: ['cart', 'cart.user'] });
+        if (!item) return; // or throw
+
+        const cartId = item.cart.id;
+        const userId = item.cart.user?.id;
+
         await this.cartItemRepository.delete(id);
+
+        if (userId) {
+            const updatedCart = await this.getCartWithTotals(cartId);
+            this.notificationsGateway.sendCartUpdate(userId, updatedCart);
+        }
     }
 
     async clearCart(cartId: string) {
+        // We need userId before deleting
+        const cart = await this.cartRepository.findOne({ where: { id: cartId }, relations: ['user'] });
+        if (!cart) return;
+
         await this.cartItemRepository.delete({ cart: { id: cartId } });
+
+        if (cart.user?.id) {
+            this.notificationsGateway.sendCartUpdate(cart.user.id, { ...cart, items: [], subtotal: 0 });
+        }
     }
 
     private async getCartWithTotals(cartId: string): Promise<Cart> {
