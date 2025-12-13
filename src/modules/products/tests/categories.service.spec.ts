@@ -11,6 +11,7 @@ const mockCategoryRepository = () => ({
     create: jest.fn(),
     save: jest.fn(),
     update: jest.fn(),
+    merge: jest.fn(),
     delete: jest.fn(),
 });
 
@@ -58,6 +59,7 @@ describe('CategoriesService', () => {
             const existing = { id: 'c1', name: 'Old' };
             const updated = { id: 'c1', name: 'New' };
             repository.findOne.mockResolvedValue(existing as any);
+            repository.merge.mockReturnValue(updated as any);
             repository.save.mockResolvedValue(updated as any);
 
             expect(await service.update('c1', { name: 'New' } as any)).toBe(updated);

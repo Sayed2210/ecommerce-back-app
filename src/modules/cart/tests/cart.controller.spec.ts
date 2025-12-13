@@ -39,7 +39,7 @@ describe('CartController', () => {
             const req = { user: { id: 'u1' } };
             // Controller might handle guest carts too, assume user for now or mock headers
             expect(await controller.getCart(req)).toBe(cart);
-            expect(service.getOrCreateCart).toHaveBeenCalledWith('u1', undefined);
+            expect(service.getOrCreateCart).toHaveBeenCalledWith('u1');
         });
     });
 

@@ -33,7 +33,8 @@ describe('OrdersController', () => {
         it('should return orders', async () => {
             const result = [];
             service.findAll.mockResolvedValue(result);
-            expect(await controller.findAll({} as any)).toBe(result);
+            const req = { user: { id: 'user-id' } } as any;
+            expect(await controller.findAll(req, {} as any)).toBe(result);
         });
     });
 
@@ -41,8 +42,9 @@ describe('OrdersController', () => {
         it('should return order', async () => {
             const result = { id: 'o1' };
             service.findOne.mockResolvedValue(result);
-            expect(await controller.findOne('o1')).toBe(result);
-            expect(service.findOne).toHaveBeenCalledWith('o1');
+            const req = { user: { id: 'user-id' } } as any;
+            expect(await controller.findOne(req, 'o1')).toBe(result);
+            expect(service.findOne).toHaveBeenCalledWith('o1', 'user-id');
         });
     });
 });

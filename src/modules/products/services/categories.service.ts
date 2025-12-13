@@ -38,8 +38,9 @@ export class CategoriesService {
     }
 
     async update(id: string, dto: CategoryDto) {
-        await this.findOne(id);
-        return this.categoryRepository.update(id, dto);
+        const category = await this.findOne(id);
+        const updated = this.categoryRepository.merge(category, dto);
+        return this.categoryRepository.save(updated);
     }
 
     async remove(id: string) {
