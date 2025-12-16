@@ -16,6 +16,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { UsersModule } from '../users/users.module';
 import { UserRepository } from './repositories/user.repository';
 import { HttpModule } from '@nestjs/axios';
+import { MailerService } from '@/infrastructure/email/mailer.service';
 
 @Module({
     imports: [
@@ -43,6 +44,7 @@ import { HttpModule } from '@nestjs/axios';
         JwtStrategy,
         JwtRefreshStrategy,
         UserRepository,
+        MailerService
     ],
     exports: [AuthService, TokenService, TypeOrmModule, JwtModule, PassportModule],
 })

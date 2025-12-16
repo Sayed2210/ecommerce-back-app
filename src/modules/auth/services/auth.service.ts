@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
+import { MailerService } from '../../../infrastructure/email/mailer.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
@@ -18,6 +19,7 @@ export class AuthService {
         private readonly passwordService: PasswordService,
         private readonly tokenService: TokenService,
         private readonly configService: ConfigService,
+        private readonly mailerService: MailerService,
     ) { }
 
     async register(dto: RegisterDto) {
@@ -79,7 +81,19 @@ export class AuthService {
         }
 
         const resetToken = await this.tokenService.generateResetToken(user.id);
-        // Send email with reset token via queue
+        const appUrl = this.configService.get('APP_URL') || 'http://localhost:3000';
+        const resetUrl = `${appUrl}/auth/reset-password?token=${resetToken}`;
+
+        try {
+            await this.mailerService.sendPasswordReset(user.email, {
+                name: user.firstName,
+                resetUrl,
+                expiresIn: '1 hour',
+            });
+        } catch (error) {
+            console.error('Failed to send password reset email:', error);
+        }
+
         return { message: 'Password reset email sent' };
     }
 
@@ -91,6 +105,18 @@ export class AuthService {
         await this.tokenService.revokeResetToken(dto.token);
 
         return { message: 'Password reset successful' };
+    }
+
+    async verifyEmail(token: string) {
+        const payload = await this.tokenService.verifyVerificationToken(token);
+        const user = await this.userRepository.findOneOrFail({ id: payload.sub });
+
+        if (user.isEmailVerified) {
+            return { message: 'Email already verified' };
+        }
+
+        await this.userRepository.update(user.id, { isEmailVerified: true });
+        return { message: 'Email verified successfully' };
     }
 
     async logout(refreshToken: string) {
