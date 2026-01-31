@@ -64,6 +64,16 @@ export class AuthController {
         return this.authService.refreshTokens(refreshTokenDto);
     }
 
+    @Post('verify-email')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Verify email', description: 'Verify user email address' })
+    @ApiBody({ schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] } })
+    @ApiResponse({ status: 200, description: 'Email verified successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+    async verifyEmail(@Body('token') token: string) {
+        return this.authService.verifyEmail(token);
+    }
+
     /**
      * Request password reset email
      */

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,11 +19,17 @@ export class TokenService {
 
     async generateTokens(userId: string) {
         const payload = { sub: userId, type: 'access' };
-        const refreshPayload = { sub: userId, type: 'refresh' };
+        const refreshPayload = {
+            sub: userId,
+            type: 'refresh',
+            jti: crypto.randomUUID()
+        };
+        const secret = this.configService.get('JWT_SECRET');
+        console.log('TokenService generating tokens. Secret available:', !!secret);
 
         const [accessToken, refreshToken] = await Promise.all([
             this.jwtService.signAsync(payload, {
-                secret: this.configService.get('JWT_ACCESS_SECRET'),
+                secret: this.configService.get('JWT_SECRET'),
                 expiresIn: '15m',
             }),
             this.jwtService.signAsync(refreshPayload, {
@@ -39,6 +46,14 @@ export class TokenService {
         return this.jwtService.signAsync(payload, {
             secret: this.configService.get('JWT_RESET_SECRET'),
             expiresIn: '1h',
+        });
+    }
+
+    async generateVerificationToken(userId: string): Promise<string> {
+        const payload = { sub: userId, type: 'verification' };
+        return this.jwtService.signAsync(payload, {
+            secret: this.configService.get('JWT_VERIFICATION_SECRET') || 'verification-secret',
+            expiresIn: '24h',
         });
     }
 
@@ -62,15 +77,23 @@ export class TokenService {
         }
     }
 
+    async verifyVerificationToken(token: string) {
+        try {
+            return await this.jwtService.verifyAsync(token, {
+                secret: this.configService.get('JWT_VERIFICATION_SECRET') || 'verification-secret',
+            });
+        } catch (error) {
+            throw new Error('Invalid or expired verification token');
+        }
+    }
+
     async saveRefreshToken(userId: string, token: string): Promise<void> {
-        await this.refreshTokenRepository.upsert(
-            {
-                userId,
-                token,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-            ['userId'],
-        );
+        const refreshToken = this.refreshTokenRepository.create({
+            userId,
+            token,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        });
+        await this.refreshTokenRepository.save(refreshToken);
     }
 
     async revokeRefreshToken(token: string): Promise<void> {

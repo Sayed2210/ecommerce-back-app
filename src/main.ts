@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { LanguageInterceptor } from './common/interceptors/language.interceptor';
 
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -14,6 +15,8 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  app.useGlobalInterceptors(new LanguageInterceptor());
 
   await app.listen(process.env.PORT ?? 3000);
 }

@@ -173,6 +173,18 @@ export class MailerService {
         });
     }
 
+    async sendVerificationEmail(to: string, data: {
+        name: string;
+        url: string;
+    }): Promise<void> {
+        await this.sendEmailAsync({
+            to,
+            subject: 'Verify Your Email Address',
+            template: 'verification',
+            data,
+        });
+    }
+
     async sendOrderShipped(to: string, data: {
         orderNumber: string;
         trackingNumber: string;
