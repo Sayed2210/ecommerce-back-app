@@ -6,7 +6,11 @@ import { NotificationDto } from '../dto/notification.dto';
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ].filter(Boolean),
     credentials: true,
   },
 })
