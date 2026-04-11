@@ -7,6 +7,15 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors({
+    origin: [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ].filter(Boolean),
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('E-commerce Backend API')
     .setDescription('The E-commerce Backend API description')
