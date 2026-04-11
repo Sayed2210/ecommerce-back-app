@@ -19,7 +19,7 @@ export class CreateOrderDto {
     @IsOptional()
     couponCode?: string;
 
-    @ApiProperty({
+    @ApiProperty({  
         description: 'Payment method (e.g., credit_card, paypal, stripe)',
         example: 'credit_card',
     })
