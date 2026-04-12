@@ -30,18 +30,31 @@ export class ReviewsController {
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Get review details', description: 'Get detailed review information' })
+    @ApiResponse({ status: 200, description: 'Review retrieved' })
+    @ApiResponse({ status: 404, description: 'Review not found' })
     findOne(@Param('id') id: string) {
         return this.reviewsService.findOne(id);
     }
 
     @Patch(':id')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update review', description: 'Update an existing review' })
+    @ApiResponse({ status: 200, description: 'Review updated' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    @ApiResponse({ status: 404, description: 'Review not found' })
     update(@Request() req, @Param('id') id: string, @Body() updateReviewDto: UpdateReviewDto) {
         return this.reviewsService.update(id, req.user.id, updateReviewDto);
     }
 
     @Delete(':id')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete review', description: 'Delete a review' })
+    @ApiResponse({ status: 200, description: 'Review deleted' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    @ApiResponse({ status: 404, description: 'Review not found' })
     remove(@Request() req, @Param('id') id: string) {
         return this.reviewsService.remove(id, req.user.id);
     }
