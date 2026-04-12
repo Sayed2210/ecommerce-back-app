@@ -1,19 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { LanguageInterceptor } from './common/interceptors/language.interceptor';
+import helmet from 'helmet';
 
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(helmet());
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean) as string[];
+  if (!isProduction) {
+    allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
+  }
+
   app.enableCors({
-    origin: [
-      process.env.FRONTEND_URL,
-      'http://localhost:3000',
-      'http://localhost:3001',
-    ].filter(Boolean),
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
   });
 
   const config = new DocumentBuilder()

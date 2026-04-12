@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PasswordService {
@@ -12,12 +13,7 @@ export class PasswordService {
         return bcrypt.compare(password, hash);
     }
 
-    generateRandomPassword(length = 12): string {
-        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-        let password = '';
-        for (let i = 0; i < length; i++) {
-            password += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        return password;
+    generateRandomPassword(length = 16): string {
+        return crypto.randomBytes(length).toString('base64').slice(0, length);
     }
 }
