@@ -5,37 +5,55 @@ import {
     UseGuards,
     Request,
     HttpCode,
-    HttpStatus
+    HttpStatus,
+    Headers,
+    Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { RawBodyRequest } from '@nestjs/common';
 import { CheckoutService } from '../services/checkout.service';
+import { PaymentService } from '../services/payment.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { EmailVerifiedGuard } from '../../../common/guards/email-verified.guard';
 import { CreateOrderDto } from '../dtos/create-order.dto';
-import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
 
 /**
  * Checkout Controller
- * Handles order creation, payment processing, and coupon application
+ * Handles order creation, payment processing, and coupon application.
+ * The Stripe webhook endpoint is public (no JWT) and requires the raw body.
  */
 @ApiTags('Checkout')
-@ApiBearerAuth()
 @Controller('checkout')
-@UseGuards(JwtAuthGuard)
 export class CheckoutController {
-    constructor(private readonly checkoutService: CheckoutService) { }
+    constructor(
+        private readonly checkoutService: CheckoutService,
+        private readonly paymentService: PaymentService,
+    ) {}
+
+    /**
+     * Stripe webhook — must be public and receive raw body for signature verification.
+     */
+    @Post('webhook')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Stripe webhook receiver' })
+    async stripeWebhook(
+        @Headers('stripe-signature') signature: string,
+        @Req() req: RawBodyRequest<Request>,
+    ) {
+        return this.paymentService.handleWebhook(signature, req.rawBody);
+    }
 
     /**
      * Validate checkout data before creating order
      */
     @Post('validate')
+    @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
+    @ApiBearerAuth()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Validate checkout', description: 'Validate cart and checkout data before order creation' })
     @ApiResponse({ status: 200, description: 'Checkout validation successful' })
     @ApiResponse({ status: 400, description: 'Validation failed' })
-    async validateCheckout(
-        @Request() req,
-        @Body() checkoutData: any
-    ) {
+    async validateCheckout(@Request() req, @Body() checkoutData: any) {
         return this.checkoutService.validateCheckout(req.user.id, checkoutData);
     }
 
@@ -43,14 +61,13 @@ export class CheckoutController {
      * Create order from cart
      */
     @Post('create-order')
+    @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
+    @ApiBearerAuth()
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create order', description: 'Create new order from cart items' })
     @ApiResponse({ status: 201, description: 'Order successfully created' })
     @ApiResponse({ status: 400, description: 'Invalid order data or insufficient stock' })
-    async createOrder(
-        @Request() req,
-        @Body() orderData: CreateOrderDto
-    ) {
+    async createOrder(@Request() req, @Body() orderData: CreateOrderDto) {
         return this.checkoutService.createOrder(req.user.id, orderData);
     }
 
@@ -58,16 +75,13 @@ export class CheckoutController {
      * Apply coupon code to cart
      */
     @Post('apply-coupon')
+    @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
+    @ApiBearerAuth()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Apply coupon', description: 'Apply discount coupon to cart' })
     @ApiResponse({ status: 200, description: 'Coupon successfully applied' })
     @ApiResponse({ status: 400, description: 'Invalid or expired coupon' })
-    async applyCoupon(
-        @Request() req,
-        @Body('code') code: string
-    ) {
-        const dto = new ApplyCouponDto();
-        dto.code = code;
-        return this.checkoutService.applyCoupon(dto);
+    async applyCoupon(@Body('code') code: string) {
+        return this.checkoutService.applyCoupon({ code } as any);
     }
 }

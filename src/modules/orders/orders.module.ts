@@ -32,6 +32,6 @@ import { UsersModule } from '../users/users.module';
         CouponService,
         OrderRepository,
     ],
-    exports: [OrdersService, OrderRepository],
+    exports: [OrdersService, OrderRepository, PaymentService],
 })
 export class OrdersModule { }

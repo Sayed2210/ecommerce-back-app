@@ -113,6 +113,10 @@ export class ElasticsearchService {
         };
     }
 
+    async ping(): Promise<void> {
+        await this.client.ping();
+    }
+
     private getSortClause(sortBy: string) {
         switch (sortBy) {
             case 'price-low':
