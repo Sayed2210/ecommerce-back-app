@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, Min, IsOptional, IsArray, IsBoolean, IsObject, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, IsOptional, IsArray, IsBoolean, IsObject, ValidateNested, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { CreateVariantDto } from './variant.dto';
@@ -68,7 +68,7 @@ export class CreateProductDto {
         type: [String],
     })
     @IsArray()
-    @IsString({ each: true })
+    @IsUrl({}, { each: true })
     @IsOptional()
     images?: string[];
 

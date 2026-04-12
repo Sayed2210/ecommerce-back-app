@@ -8,6 +8,7 @@ import {
     Request
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
@@ -29,6 +30,8 @@ export class AuthController {
      * Register a new user account
      */
     @Post('register')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { ttl: 60000, limit: 5 } })
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Register a new user', description: 'Create a new user account with email and password' })
     @ApiBody({ type: RegisterDto })
@@ -42,6 +45,8 @@ export class AuthController {
      * Login with email and password
      */
     @Post('login')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { ttl: 60000, limit: 5 } })
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'User login', description: 'Authenticate user with email and password' })
     @ApiBody({ type: LoginDto })
@@ -78,6 +83,8 @@ export class AuthController {
      * Request password reset email
      */
     @Post('forgot-password')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { ttl: 3600000, limit: 3 } })
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Forgot password', description: 'Request password reset email' })
     @ApiBody({ type: ForgotPasswordDto })
@@ -90,6 +97,8 @@ export class AuthController {
      * Reset password with token
      */
     @Post('reset-password')
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { ttl: 3600000, limit: 5 } })
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Reset password', description: 'Reset password using token from email' })
     @ApiBody({ type: ResetPasswordDto })

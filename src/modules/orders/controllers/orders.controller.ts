@@ -83,8 +83,9 @@ export class OrdersController {
      * Get order analytics (Admin only)
      */
     @Get('analytics/summary')
-    async getAnalytics(@Request() req) {
-        // For regular users, show only their analytics
-        return this.ordersService.getOrderAnalytics(req.user.id);
+    @UseGuards(RolesGuard)
+    @Roles(UserRole.ADMIN)
+    async getAnalytics() {
+        return this.ordersService.getOrderAnalytics();
     }
 }

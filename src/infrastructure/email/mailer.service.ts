@@ -45,7 +45,7 @@ export class MailerService {
             maxMessages: 100,
             rateLimit: 10,
             tls: {
-                rejectUnauthorized: false, // Set true in production with valid cert
+                rejectUnauthorized: this.configService.get('NODE_ENV') === 'production',
             },
         });
 

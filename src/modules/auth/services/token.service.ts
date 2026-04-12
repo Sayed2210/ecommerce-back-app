@@ -5,14 +5,19 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RefreshToken } from '../entities/refresh-token.entity';
+import { RedisService } from '@infrastructure/cache/redis.service';
 
 @Injectable()
 export class TokenService {
     private readonly logger = new Logger(TokenService.name);
 
+    // TTL matches reset token expiry (1 hour)
+    private readonly RESET_TOKEN_REVOKED_TTL = 3600;
+
     constructor(
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
+        private readonly redisService: RedisService,
         @InjectRepository(RefreshToken)
         private readonly refreshTokenRepository: Repository<RefreshToken>,
     ) { }
@@ -24,9 +29,6 @@ export class TokenService {
             type: 'refresh',
             jti: crypto.randomUUID()
         };
-        const secret = this.configService.get('JWT_SECRET');
-        console.log('TokenService generating tokens. Secret available:', !!secret);
-
         const [accessToken, refreshToken] = await Promise.all([
             this.jwtService.signAsync(payload, {
                 secret: this.configService.get('JWT_SECRET'),
@@ -51,8 +53,10 @@ export class TokenService {
 
     async generateVerificationToken(userId: string): Promise<string> {
         const payload = { sub: userId, type: 'verification' };
+        const secret = this.configService.get('JWT_VERIFICATION_SECRET');
+        if (!secret) throw new Error('JWT_VERIFICATION_SECRET is not configured');
         return this.jwtService.signAsync(payload, {
-            secret: this.configService.get('JWT_VERIFICATION_SECRET') || 'verification-secret',
+            secret,
             expiresIn: '24h',
         });
     }
@@ -69,6 +73,11 @@ export class TokenService {
 
     async verifyResetToken(token: string) {
         try {
+            const tokenHash = this.hashToken(token);
+            const isRevoked = await this.redisService.exists(`revoked:reset:${tokenHash}`);
+            if (isRevoked) {
+                throw new Error('Reset token has already been used');
+            }
             return await this.jwtService.verifyAsync(token, {
                 secret: this.configService.get('JWT_RESET_SECRET'),
             });
@@ -79,9 +88,9 @@ export class TokenService {
 
     async verifyVerificationToken(token: string) {
         try {
-            return await this.jwtService.verifyAsync(token, {
-                secret: this.configService.get('JWT_VERIFICATION_SECRET') || 'verification-secret',
-            });
+            const secret = this.configService.get('JWT_VERIFICATION_SECRET');
+            if (!secret) throw new Error('JWT_VERIFICATION_SECRET is not configured');
+            return await this.jwtService.verifyAsync(token, { secret });
         } catch (error) {
             throw new Error('Invalid or expired verification token');
         }
@@ -101,7 +110,11 @@ export class TokenService {
     }
 
     async revokeResetToken(token: string): Promise<void> {
-        // Implementation for storing reset tokens if needed
-        this.logger.log(`Revoked reset token: ${token}`);
+        const tokenHash = this.hashToken(token);
+        await this.redisService.set(`revoked:reset:${tokenHash}`, true, this.RESET_TOKEN_REVOKED_TTL);
+    }
+
+    private hashToken(token: string): string {
+        return crypto.createHash('sha256').update(token).digest('hex');
     }
 }
