@@ -1,5 +1,5 @@
 // src/modules/products/entities/product.entity.ts
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, ManyToMany, JoinTable, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '@common/entities/base.entity';
 import { Category } from './category.entity';
 import { Brand } from './brand.entity';
@@ -10,6 +10,7 @@ import { OrderItem } from '@modules/orders/entities/order-item.entity';
 import { Review } from '@modules/reviews/entities/review.entity';
 import { Wishlist } from '@modules/users/entities/wishlist.entity';
 import { InventoryLog } from './inventory-log.entity';
+import { Tag } from './tag.entity';
 @Entity('products')
 @Index(['slug', 'isActive', 'publishedAt'])
 export class Product extends BaseEntity {
@@ -103,4 +104,8 @@ export class Product extends BaseEntity {
 
     @OneToMany(() => InventoryLog, log => log.product)
     inventoryLogs: InventoryLog[];
+
+    @ManyToMany(() => Tag, (tag) => tag.products, { cascade: true, eager: false })
+    @JoinTable({ name: 'product_tags' })
+    tags: Tag[];
 }

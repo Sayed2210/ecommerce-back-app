@@ -1,61 +1,107 @@
 # Users Module
 
-Manages customer profiles, shipping/billing addresses, and wishlists.
+Manages user profiles, shipping addresses, and wishlists.
 
-## Business Purpose
+## Responsibilities
 
-After a customer authenticates, this module lets them maintain their personal data — update their profile, save multiple delivery addresses, and curate a wishlist of products they want to buy later. Admins use this module to view and deactivate user accounts.
+- Profile retrieval and updates (self-service)
+- Admin user management (list, view, delete)
+- Shipping address CRUD
+- Wishlist add/remove/list
 
-## How It Works
+## Endpoints
 
-### Profile Management
-- `GET /users/me` — returns the authenticated user's profile. Sensitive fields (`passwordHash`, `refreshTokens`) are stripped before returning.
-- `PATCH /users/me` — allows updating `firstName`, `lastName`, `phone`, `avatarUrl`. If the email is being changed, uniqueness is re-checked first.
-- `DELETE /users/:id` (Admin) — does a soft deactivation (`isActive = false`) rather than a hard delete, preserving order history.
+### Users
 
-### Address Book
-Customers can store multiple named addresses (home, office, etc.) and designate one as default. The checkout flow references address IDs when creating an order.
+| Method | Path | Auth | Role | Description |
+|--------|------|------|------|-------------|
+| GET | `/users` | JWT | ADMIN | List all users (paginated) |
+| GET | `/users/me` | JWT | — | Get own profile |
+| PATCH | `/users/me` | JWT | — | Update own profile |
+| GET | `/users/:id` | JWT | ADMIN | Get user by ID |
+| DELETE | `/users/:id` | JWT | ADMIN | Soft-delete user |
 
-- `POST /users/me/addresses` — add a new address
-- `GET /users/me/addresses` — list all addresses
-- `PATCH /users/me/addresses/:id` — update an address
-- `DELETE /users/me/addresses/:id` — remove an address
-
-### Wishlist
-A wishlist entry links a user to a product. Products can be added and removed. The wishlist is fetched with full product details so the frontend can render prices and availability without a separate products call.
-
-- `GET /users/me/wishlist` — returns the wishlist with product relations loaded
-- `POST /users/me/wishlist` — add a product
-- `DELETE /users/me/wishlist/:productId` — remove a product
-
-### Admin User Management
-Admins can list all users (paginated), fetch a user by ID, and deactivate accounts. These routes are guarded by `@Roles(UserRole.ADMIN)`.
-
-## API Endpoints
+### Addresses
 
 | Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/users/me` | JWT | Get own profile |
-| PATCH | `/users/me` | JWT | Update own profile |
-| GET | `/users/me/wishlist` | JWT | Get wishlist with products |
-| POST | `/users/me/addresses` | JWT | Add an address |
-| GET | `/users/me/addresses` | JWT | List addresses |
-| PATCH | `/users/me/addresses/:id` | JWT | Update address |
-| DELETE | `/users/me/addresses/:id` | JWT | Delete address |
-| GET | `/users` | Admin | List all users (paginated) |
-| GET | `/users/:id` | Admin | Get user by ID |
-| DELETE | `/users/:id` | Admin | Deactivate user |
+|--------|------|------|-------------|
+| GET | `/addresses` | JWT | List own addresses |
+| POST | `/addresses` | JWT | Create address |
+| PATCH | `/addresses/:id` | JWT | Update address |
+| PATCH | `/addresses/:id/default` | JWT | Set as default |
+| DELETE | `/addresses/:id` | JWT | Delete address |
+
+### Wishlist
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/users/me/wishlist` | JWT | Get wishlist products |
+| POST | `/wishlist` | JWT | Add product to wishlist |
+| DELETE | `/wishlist/:productId` | JWT | Remove from wishlist |
+
+## Entities
+
+### `Address`
+| Field | Type | Notes |
+|-------|------|-------|
+| label | enum | HOME \| WORK \| OTHER |
+| streetAddress | string | |
+| city | string | |
+| state | string | optional |
+| country | string | |
+| postalCode | string | |
+| isDefault | boolean | one default per user |
+| userId | UUID | FK → User |
+
+### `Wishlist`
+| Field | Type | Notes |
+|-------|------|-------|
+| userId | UUID | FK → User |
+| productId | UUID | FK → Product |
+| | | unique(userId, productId) |
+
+## DTOs
+
+### `UpdateProfileDto`
+```typescript
+{
+  firstName?: string
+  lastName?: string
+  phone?: string
+  avatarUrl?: string
+}
+```
+> `email`, `role`, and `isActive` are not editable via this endpoint.
+
+### `CreateAddressDto`
+```typescript
+{
+  label: AddressLabel   // HOME | WORK | OTHER
+  streetAddress: string
+  city: string
+  state?: string
+  country: string
+  postalCode: string
+  isDefault?: boolean
+}
+```
 
 ## Services
 
-| Service | Responsibility |
-|---|---|
-| `UsersService` | Profile CRUD and wishlist retrieval |
-| `AddressesService` | Address book management |
-| `NotificationsService` | User-scoped notification queries (see Notifications module) |
+### `UsersService`
+- `findAll(pagination)` — paginated user list (admin)
+- `findOne(id)` — single user, strips sensitive fields
+- `update(id, dto)` — updates profile fields only
+- `remove(id)` — sets `isActive = false`
+- `getWishlist(userId)` — returns wishlisted products with details
 
-## Key Entities
+### `AddressesService`
+- `findAll(userId)` — all addresses for the user
+- `create(userId, dto)` — creates; auto-sets default if first address
+- `update(userId, id, dto)` — ownership-checked update
+- `setDefault(userId, id)` — clears other defaults, sets this one
+- `remove(userId, id)` — ownership-checked delete
 
-- **`User`** (owned by Auth module, re-used here) — identity and role
-- **`Address`** — street, city, country, postal code, `isDefault` flag
-- **`Wishlist`** — join table between User and Product
+## Exports
+
+`UsersService`, `UserRepository`, `TypeOrmModule`

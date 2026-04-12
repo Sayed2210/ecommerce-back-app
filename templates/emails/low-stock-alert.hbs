@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Low Stock Alert</title></head>
+<body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+  <h2 style="color:#e53e3e">⚠ Low Stock Alert — {{appName}}</h2>
+  <p>The following product variant is running low on stock:</p>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0">
+    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">Product</td><td style="padding:8px;border:1px solid #ddd">{{productName}}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">SKU</td><td style="padding:8px;border:1px solid #ddd">{{sku}}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">Current Stock</td><td style="padding:8px;border:1px solid #ddd;color:#e53e3e">{{currentStock}}</td></tr>
+    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">Threshold</td><td style="padding:8px;border:1px solid #ddd">{{threshold}}</td></tr>
+  </table>
+  <p>Please restock soon to avoid stockouts.</p>
+  <p style="color:#888;font-size:12px">© {{year}} {{appName}}</p>
+</body>
+</html>

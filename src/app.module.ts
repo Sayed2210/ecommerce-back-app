@@ -16,8 +16,14 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ReturnsModule } from './modules/returns/returns.module';
+import { NewsletterModule } from './modules/newsletter/newsletter.module';
+import { HealthModule } from './modules/health/health.module';
+
+// Infrastructure Modules
 import { CacheModule } from './infrastructure/cache/cache.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
+import { StorageModule } from './infrastructure/storage/storage.module';
 
 @Module({
   imports: [
@@ -43,9 +49,10 @@ import { QueueModule } from './infrastructure/queue/queue.module';
       }),
     }),
 
-    // Cache (Redis) and Queue (BullMQ)
+    // Infrastructure
     CacheModule,
     QueueModule,
+    StorageModule,
 
     // Rate Limiting
     ThrottlerModule.forRoot({
@@ -67,8 +74,11 @@ import { QueueModule } from './infrastructure/queue/queue.module';
     NotificationsModule,
     SearchModule,
     AdminModule,
+    ReturnsModule,
+    NewsletterModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

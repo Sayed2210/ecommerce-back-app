@@ -63,9 +63,15 @@ export class TokenService {
 
     async verifyRefreshToken(token: string) {
         try {
-            return await this.jwtService.verifyAsync(token, {
+            const payload = await this.jwtService.verifyAsync(token, {
                 secret: this.configService.get('JWT_REFRESH_SECRET'),
             });
+            // Confirm token still exists in DB — detects use of rotated/revoked tokens
+            const record = await this.refreshTokenRepository.findOne({ where: { token } });
+            if (!record) {
+                throw new Error('Refresh token has been revoked');
+            }
+            return payload;
         } catch (error) {
             throw new Error('Invalid refresh token');
         }

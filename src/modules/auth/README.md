@@ -1,86 +1,131 @@
 # Auth Module
 
-Handles all identity and session management for the platform.
+Handles user registration, login, JWT token lifecycle, password management, and OAuth.
 
-## Business Purpose
+## Responsibilities
 
-Any visitor must prove who they are before accessing protected resources. This module issues JWT access tokens (short-lived) and refresh tokens (long-lived), supports email/password registration and login, password reset via email, and token revocation on logout.
+- Register/login users with email + password
+- Issue and refresh JWT access/refresh token pairs
+- Email verification on registration
+- Password reset flow (forgot → email → reset)
+- OAuth login (Google, GitHub)
+- Revoke tokens on logout (refresh token in DB, reset token in Redis)
 
-## How It Works
+## Endpoints
 
-### Registration
-1. Checks that the email is not already taken — throws `409 Conflict` if it is.
-2. Hashes the password with bcrypt via `PasswordService`.
-3. Creates the `User` record with `role = customer` by default.
-4. Immediately issues an `accessToken` + `refreshToken` pair so the user is logged in right away.
-5. Saves the hashed refresh token to the `refresh_tokens` table.
+| Method | Path | Rate Limit | Auth | Description |
+|--------|------|-----------|------|-------------|
+| POST | `/auth/register` | 5/min | ❌ | Create new account |
+| POST | `/auth/login` | 5/min | ❌ | Login, returns token pair |
+| POST | `/auth/refresh` | — | ❌ | Exchange refresh token for new access token |
+| POST | `/auth/verify-email` | — | ❌ | Verify email with token from email |
+| POST | `/auth/forgot-password` | 3/hr | ❌ | Request reset email |
+| POST | `/auth/reset-password` | 5/hr | ❌ | Reset password with token |
+| POST | `/auth/logout` | — | JWT | Revoke refresh token |
 
-### Login
-1. Looks up the user by email. Returns `401 Unauthorized` for both "no account" and "wrong password" — deliberately gives no hint which one failed.
-2. Issues a new token pair and saves the refresh token.
+## Entities
 
-### Token Refresh
-1. Verifies the submitted refresh token (signature + expiry).
-2. Revokes the old refresh token (one-time use).
-3. Issues a new token pair and saves the new refresh token.
+### `User`
+| Field | Type | Notes |
+|-------|------|-------|
+| id | UUID | PK, auto-generated |
+| email | string | unique, indexed |
+| passwordHash | string | bcrypt, 12 rounds |
+| firstName | string | |
+| lastName | string | |
+| phone | string | optional |
+| avatarUrl | string | optional |
+| isEmailVerified | boolean | default false |
+| isActive | boolean | default true |
+| role | enum | CUSTOMER \| STAFF \| ADMIN |
+| lastLogin | Date | optional |
 
-### Forgot / Reset Password
-1. `POST /auth/forgot-password` — always returns a success-looking message regardless of whether the email exists (prevents user enumeration). If the account does exist, a reset link is sent via `MailerService` with a 1-hour expiry token.
-2. `POST /auth/reset-password` — verifies the token, hashes the new password, saves it, and revokes the reset token so it cannot be reused.
+### `RefreshToken`
+| Field | Type | Notes |
+|-------|------|-------|
+| token | string | unique |
+| isRevoked | boolean | |
+| expiresAt | Date | 7 days |
+| userId | UUID | FK → User |
 
-### Logout
-Revokes the supplied refresh token. The short-lived access token is not explicitly invalidated — it naturally expires.
+### `OAuthProvider`
+| Field | Type | Notes |
+|-------|------|-------|
+| provider | enum | GOOGLE \| GITHUB |
+| providerUserId | string | |
+| accessToken | string | optional |
+| userId | UUID | FK → User |
 
-### Email Verification
-`POST /auth/verify-email` — marks `isEmailVerified = true` on the user. The verification token is issued separately and revoked after use.
+## DTOs
 
-## Token Architecture
+### `RegisterDto`
+```typescript
+{
+  email: string        // valid email
+  password: string     // min 8, uppercase + lowercase + digit + special char
+  firstName: string
+  lastName: string
+  phone?: string
+}
+```
 
-| Token | Stored in DB? | Revocable? | Purpose |
-|---|---|---|---|
-| Access Token (JWT) | No | No (expires via TTL) | Authenticates API requests |
-| Refresh Token (JWT) | Yes (hashed) | Yes | Gets a new access token |
-| Reset Token (JWT) | Yes | Yes | One-time password reset |
-| Verification Token | Yes | Yes | One-time email verification |
+### `LoginDto`
+```typescript
+{
+  email: string
+  password: string
+}
+```
 
-## Guards & Decorators
-
-- **`JwtAuthGuard`** — validates the `Bearer` access token. Apply to protected routes.
-- **`@Public()`** — marks a route as opt-out of the global JWT guard (register, login, forgot-password, etc. are public).
-- **`RolesGuard`** — reads `@Roles(UserRole.ADMIN)` and checks `user.role` in the JWT payload.
-
-## User Roles
-
-| Role | Description |
-|---|---|
-| `customer` | Default role. Can browse, buy, review. |
-| `staff` | Back-office operator. Can manage orders and products. |
-| `admin` | Full access including user management and admin dashboard. |
-
-## API Endpoints
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/auth/register` | Public | Create account and receive tokens |
-| POST | `/auth/login` | Public | Authenticate and receive tokens |
-| POST | `/auth/refresh` | Public | Rotate refresh token |
-| POST | `/auth/forgot-password` | Public | Send reset email |
-| POST | `/auth/reset-password` | Public | Apply new password using reset token |
-| POST | `/auth/logout` | JWT | Revoke refresh token |
-| POST | `/auth/verify-email` | Public | Verify email address |
+### `ResetPasswordDto`
+```typescript
+{
+  token: string
+  newPassword: string
+}
+```
 
 ## Services
 
-| Service | Responsibility |
-|---|---|
-| `AuthService` | Orchestrates registration, login, logout, and password flows |
-| `TokenService` | Issues, saves, verifies, and revokes all JWT tokens |
-| `PasswordService` | bcrypt hash and verify |
-| `OAuthService` | OAuth provider linking (Google, etc.) |
-| `MailerService` | Sends password-reset and verification emails |
+### `AuthService`
+- `register(dto)` — creates user, sends verification email, returns tokens
+- `login(dto)` — validates credentials, returns tokens
+- `refreshTokens(dto)` — verifies refresh token, issues new access token
+- `verifyEmail(token)` — marks `isEmailVerified = true`
+- `forgotPassword(dto)` — generates reset token (1h), sends email
+- `resetPassword(dto)` — verifies token (checks Redis revocation), sets new password hash, revokes token
+- `logout(refreshToken)` — deletes refresh token from DB
 
-## Key Entities
+### `TokenService`
+- `generateTokens(userId)` — access token (15m) + refresh token (7d)
+- `generateResetToken(userId)` — signed JWT, 1h, `JWT_RESET_SECRET`
+- `generateVerificationToken(userId)` — signed JWT, 24h, `JWT_VERIFICATION_SECRET`
+- `verifyRefreshToken(token)` — verifies JWT signature **and** confirms the token still exists in DB (detects use of already-rotated tokens)
+- `verifyResetToken(token)` — checks Redis blocklist first, then verifies signature
+- `revokeResetToken(token)` — SHA-256 hashes token, stores in Redis with 1h TTL (`revoked:reset:<hash>`)
 
-- **`User`** — core identity record with `role`, `isEmailVerified`, `isActive`, `lastLogin`
-- **`RefreshToken`** — persisted refresh tokens enabling rotation and revocation
-- **`OAuthProvider`** — links a user to an external OAuth identity (e.g. Google user ID)
+### `PasswordService`
+- `hash(password)` — bcrypt, 12 rounds
+- `verify(password, hash)` — bcrypt compare
+- `generateRandomPassword(length)` — `crypto.randomBytes`, base64
+
+## Security
+
+- Refresh tokens stored in DB; invalidated on logout
+- Reset tokens blocklisted in Redis after use (SHA-256 hash, 1h TTL)
+- `JWT_VERIFICATION_SECRET` throws at startup if not set (no fallback)
+- All auth endpoints behind `ThrottlerGuard` with route-specific limits
+
+## Env Variables
+
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | Access token signing secret (32+ bytes) |
+| `JWT_REFRESH_SECRET` | Refresh token signing secret |
+| `JWT_RESET_SECRET` | Password reset token secret |
+| `JWT_VERIFICATION_SECRET` | Email verification token secret |
+| `JWT_EXPIRES_IN` | Access token TTL (default `15m`) |
+
+## Exports
+
+`AuthService`, `TokenService`, `TypeOrmModule`, `JwtModule`, `PassportModule`
