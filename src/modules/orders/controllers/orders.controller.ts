@@ -85,6 +85,9 @@ export class OrdersController {
     @Get('analytics/summary')
     @UseGuards(RolesGuard)
     @Roles(UserRole.ADMIN)
+    @ApiOperation({ summary: 'Get order analytics', description: 'Get order analytics summary (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Analytics retrieved' })
+    @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
     async getAnalytics() {
         return this.ordersService.getOrderAnalytics();
     }

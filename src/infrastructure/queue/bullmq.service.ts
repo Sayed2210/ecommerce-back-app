@@ -32,7 +32,7 @@ export class BullmqService implements OnModuleInit, OnModuleDestroy {
             host: this.configService.get('REDIS_HOST', 'localhost'),
             port: this.configService.get('REDIS_PORT', 6379),
             password: this.configService.get('REDIS_PASSWORD'),
-            maxRetriesPerRequest: 3,
+            maxRetriesPerRequest: null,
             enableReadyCheck: true,
             lazyConnect: true,
         });
