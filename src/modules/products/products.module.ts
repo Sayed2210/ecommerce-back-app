@@ -3,8 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductsService } from './services/products.service';
 import { TagsService } from './services/tags.service';
 import { InventoryService } from './services/inventory.service';
+import { CategoriesService } from './services/categories.service';
 import { ProductsController } from './controllers/products.controller';
 import { TagsController } from './controllers/tags.controller';
+import { CategoriesController } from './controllers/categories.controller';
 import { Product } from './entities/product.entity';
 import { ProductRepository } from './repositories/product.repository';
 import { Category } from './entities/category.entity';
@@ -18,11 +20,12 @@ import { MailerService } from '@infrastructure/email/mailer.service';
 
 @Module({
     imports: [TypeOrmModule.forFeature([Product, Category, ProductVariant, Tag, InventoryLog])],
-    controllers: [ProductsController, TagsController],
+    controllers: [ProductsController, TagsController, CategoriesController],
     providers: [
         ProductsService,
         TagsService,
         InventoryService,
+        CategoriesService,
         InventoryAlertWorker,
         MailerService,
         ProductRepository,

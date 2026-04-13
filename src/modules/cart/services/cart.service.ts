@@ -152,8 +152,9 @@ export class CartService {
 
         if (!cart) return null;
 
-        // Calculate totals
+        // Calculate totals (skip items where the product FK was not resolved)
         cart.items = cart.items.map(item => {
+            if (!item.product) return item;
             const basePrice = Number(item.product.basePrice);
             const modifier = item.variant ? Number(item.variant.priceModifier) : 0;
             item.totalPrice = (basePrice + modifier) * item.quantity;

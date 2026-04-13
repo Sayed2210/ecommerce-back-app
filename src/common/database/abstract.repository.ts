@@ -1,5 +1,6 @@
 import { Repository as TypeORMRepository, SelectQueryBuilder, ObjectLiteral, FindOptionsWhere, DeepPartial, FindManyOptions, FindOneOptions } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { NotFoundException } from '@nestjs/common';
 
 export abstract class AbstractRepository<T extends ObjectLiteral> {
     constructor(protected readonly repository: TypeORMRepository<T>) { }
@@ -15,7 +16,11 @@ export abstract class AbstractRepository<T extends ObjectLiteral> {
     }
 
     async findOneOrFail(where: FindOptionsWhere<T>): Promise<T> {
-        return this.repository.findOneOrFail({ where });
+        const entity = await this.repository.findOne({ where });
+        if (!entity) {
+            throw new NotFoundException('Resource not found');
+        }
+        return entity;
     }
 
     async findAll(options?: FindManyOptions<T>): Promise<T[]> {
