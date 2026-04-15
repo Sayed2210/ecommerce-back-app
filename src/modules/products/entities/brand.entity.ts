@@ -1,5 +1,5 @@
 // src/modules/products/entities/brand.entity.ts
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, DeleteDateColumn } from 'typeorm';
 import { BaseEntity } from '@common/entities/base.entity';
 import { Product } from './product.entity';
 
@@ -22,6 +22,9 @@ export class Brand extends BaseEntity {
 
     @Column({ name: 'is_active', default: true })
     isActive: boolean;
+
+    @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+    deletedAt?: Date;
 
     @OneToMany(() => Product, product => product.brand)
     products: Product[];

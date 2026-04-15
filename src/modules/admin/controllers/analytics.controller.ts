@@ -6,7 +6,9 @@ import {
     Query,
     UseGuards,
     HttpCode,
-    HttpStatus
+    HttpStatus,
+    ParseIntPipe,
+    DefaultValuePipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from '../services/analytics.service';
@@ -31,7 +33,7 @@ export class AnalyticsController {
     @ApiOperation({ summary: 'Get audit logs', description: 'Retrieve system audit logs' })
     @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiResponse({ status: 200, description: 'Audit logs retrieved' })
-    async getAuditLogs(@Query('limit') limit?: number) {
+    async getAuditLogs(@Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number) {
         return this.analyticsService.getAuditLogs(limit);
     }
 

@@ -1,4 +1,10 @@
+import { IsString, IsOptional } from 'class-validator';
+
 export class TranslatableString {
+    @IsString()
     en: string;
-    ar: string;
+
+    @IsString()
+    @IsOptional()
+    ar?: string;
 }
