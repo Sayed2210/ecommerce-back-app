@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -73,7 +73,7 @@ export class TokenService {
             }
             return payload;
         } catch (error) {
-            throw new Error('Invalid refresh token');
+            throw new UnauthorizedException('Invalid refresh token');
         }
     }
 
@@ -88,7 +88,7 @@ export class TokenService {
                 secret: this.configService.get('JWT_RESET_SECRET'),
             });
         } catch (error) {
-            throw new Error('Invalid or expired reset token');
+            throw new BadRequestException('Invalid or expired reset token');
         }
     }
 
@@ -98,7 +98,7 @@ export class TokenService {
             if (!secret) throw new Error('JWT_VERIFICATION_SECRET is not configured');
             return await this.jwtService.verifyAsync(token, { secret });
         } catch (error) {
-            throw new Error('Invalid or expired verification token');
+            throw new BadRequestException('Invalid or expired verification token');
         }
     }
 

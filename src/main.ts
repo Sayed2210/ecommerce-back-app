@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { LanguageInterceptor } from './common/interceptors/language.interceptor';
 import helmet from 'helmet';
+import { ValidationPipe } from '@nestjs/common';
 
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -9,6 +10,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.use(helmet());
+
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: false,
+  }));
 
   const isProduction = process.env.NODE_ENV === 'production';
   const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean) as string[];

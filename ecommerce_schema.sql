@@ -1,5 +1,5 @@
 -- ============================================================
--- E-COMMERCE DATABASE SCHEMA - POSTGRESQL (FIXED)
+-- E-COMMERCE DATABASE SCHEMA - POSTGRESQL 
 -- ============================================================
 
 -- 1. CREATE DATABASE
