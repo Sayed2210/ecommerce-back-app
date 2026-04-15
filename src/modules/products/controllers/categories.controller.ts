@@ -8,12 +8,14 @@ import {
     Param,
     UseGuards,
     HttpCode,
-    HttpStatus
+    HttpStatus,
+    Query
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { CategoriesService } from '../services/categories.service';
 import { CategoryDto } from '../dtos/category.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PaginationDto } from '@/common/dtos/pagination.dto';
 
 /**
  * Categories Controller
@@ -30,8 +32,8 @@ export class CategoriesController {
     @Get()
     @ApiOperation({ summary: 'Get all categories', description: 'Retrieve a list of all categories' })
     @ApiResponse({ status: 200, description: 'Categories retrieved' })
-    async findAll() {
-        return this.categoriesService.findAll();
+    async findAll(@Query() pagination: PaginationDto) {
+        return this.categoriesService.findAll(pagination);
     }
 
     /**
