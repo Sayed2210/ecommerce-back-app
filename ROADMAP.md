@@ -134,18 +134,18 @@
 
 > Close testing gaps before adding more features.
 
-- [ ] **3.1** Unit tests for untested modules
+- [x] **3.1** Unit tests for untested modules
   - `admin`: analytics.service, dashboard.service, staff.service
   - `newsletter`: newsletter.service
   - `returns`: returns.service
   - `search`: search.service, elasticsearch.service
 
-- [ ] **3.2** E2e tests for critical flows
+- [x] **3.2** E2e tests for critical flows
   - Auth flow: register → verify email → login → refresh token → logout
   - Checkout flow: add to cart → apply coupon → checkout → payment → order created
   - Order lifecycle: created → processing → shipped → delivered
 
-- [ ] **3.3** Webhook integration test
+- [x] **3.3** Webhook integration test
   - Simulate Stripe `payment_intent.succeeded` event with valid signature
   - Assert order `paymentStatus` transitions to `paid`
 
@@ -155,24 +155,24 @@
 
 > Deploy-ready infrastructure.
 
-- [ ] **4.1** Docker + docker-compose
+- [x] **4.1** Docker + docker-compose
   - Services: app, postgres, redis, elasticsearch
   - `.env.example` with all required variables documented
   - Multi-stage Dockerfile (build → production)
 
-- [ ] **4.2** GitHub Actions CI pipeline
+- [x] **4.2** GitHub Actions CI pipeline
   - Steps: lint → unit tests → build → docker build
   - Run on every PR targeting `main`
 
-- [ ] **4.3** Migration step in CI / deploy
+- [x] **4.3** Migration step in CI / deploy
   - Run `migration:run` automatically before app starts in production
   - Prevent deploy if migration fails
 
-- [ ] **4.4** Seed data
+- [x] **4.4** Seed data
   - Sample categories (tree structure), brands, and products
   - Useful for staging environment and demo purposes
 
-- [ ] **4.5** Rate limiting per sensitive endpoint
+- [x] **4.5** Rate limiting per sensitive endpoint
   - Apply `ThrottleGuard` to: `POST /auth/login`, `POST /auth/register`, `POST /orders/checkout`
   - Configure stricter limits than the global default
 

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { RawBodyRequest } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CheckoutService } from '../services/checkout.service';
 import { PaymentService } from '../services/payment.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -61,7 +62,8 @@ export class CheckoutController {
      * Create order from cart
      */
     @Post('create-order')
-    @UseGuards(JwtAuthGuard, EmailVerifiedGuard)
+    @UseGuards(ThrottlerGuard, JwtAuthGuard, EmailVerifiedGuard)
+    @Throttle({ default: { ttl: 60000, limit: 10 } })
     @ApiBearerAuth()
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create order', description: 'Create new order from cart items' })
