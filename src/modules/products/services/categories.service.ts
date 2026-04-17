@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Category } from '../entities/category.entity';
 import { CategoryDto } from '../dtos/category.dto';
 import { SlugUtil } from '../../../common/utils/slug.util';
+import { PaginationDto } from '@/common/dtos/pagination.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -24,10 +25,12 @@ export class CategoriesService {
         return this.categoryRepository.save({ ...dto, slug });
     }
 
-    async findAll() {
+    async findAll(pagination: PaginationDto) {
         return this.categoryRepository.find({
             where: { isActive: true },
             order: { name: 'ASC' },
+            skip: (pagination.page - 1) * pagination.limit,
+            take: pagination.limit,
         });
     }
 
