@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>You left something behind</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f9f9f9; margin: 0; padding: 0;">
+  <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 32px;">
+
+    <h2 style="margin-top: 0;">You left something in your cart!</h2>
+    <p>Hi {{name}},</p>
+    <p>You have items waiting in your cart. Come back and complete your purchase before they sell out.</p>
+
+    {{#if cartItems}}
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0 24px;">
+      <thead>
+        <tr style="background: #f5f5f5;">
+          <th style="text-align: left; padding: 8px; font-size: 13px;">Item</th>
+          <th style="text-align: center; padding: 8px; font-size: 13px;">Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each cartItems}}
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 8px;">{{this.variant.product.name.en}}{{#if this.variant.name}} — {{this.variant.name}}{{/if}}</td>
+          <td style="padding: 8px; text-align: center;">{{this.quantity}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style="padding: 10px 8px; font-weight: bold;">Cart Total</td>
+          <td style="padding: 10px 8px; font-weight: bold; text-align: center;">${{cartTotal}}</td>
+        </tr>
+      </tfoot>
+    </table>
+    {{/if}}
+
+    <p style="text-align: center; margin: 28px 0;">
+      <a href="{{recoveryUrl}}" style="background-color: #007bff; color: #fff; padding: 12px 28px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+        Return to Cart
+      </a>
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+    <p style="font-size: 12px; color: #999; margin: 0;">
+      © {{year}} {{appName}} &nbsp;|&nbsp;
+      <a href="mailto:{{supportEmail}}" style="color: #999;">{{supportEmail}}</a>
+    </p>
+  </div>
+</body>
+</html>

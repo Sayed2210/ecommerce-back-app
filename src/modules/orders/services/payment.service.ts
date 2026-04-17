@@ -77,63 +77,80 @@ export class PaymentService {
     async handleWebhook(signature: string, payload: Buffer) {
         const endpointSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
 
+        // Step 1: Verify signature — return 400 on failure so Stripe knows it's invalid
+        let event: Stripe.Event;
         try {
-            const event = this.stripe.webhooks.constructEvent(
-                payload,
-                signature,
-                endpointSecret
-            );
+            event = this.stripe.webhooks.constructEvent(payload, signature, endpointSecret);
+        } catch (error) {
+            this.logger.error('Webhook signature verification failed:', error.message);
+            throw new BadRequestException(`Webhook signature invalid: ${error.message}`);
+        }
 
+        // Step 2: Process event — log errors but always return 200 to prevent Stripe retries
+        try {
             switch (event.type) {
                 case 'payment_intent.succeeded':
-                    await this.handleSuccessfulPayment(event.data.object);
+                    await this.handleSuccessfulPayment(event.data.object as Stripe.PaymentIntent);
                     break;
                 case 'payment_intent.payment_failed':
-                    await this.handleFailedPayment(event.data.object);
+                    await this.handleFailedPayment(event.data.object as Stripe.PaymentIntent);
+                    break;
+                case 'payment_intent.canceled':
+                    await this.handleCanceledPayment(event.data.object as Stripe.PaymentIntent);
                     break;
                 default:
-                    this.logger.log(`Unhandled event type: ${event.type}`);
+                    this.logger.log(`Unhandled webhook event type: ${event.type}`);
             }
-
-            return { received: true };
         } catch (error) {
-            this.logger.error('Webhook error:', error);
-            throw new BadRequestException(`Webhook error: ${error.message}`);
+            this.logger.error(`Error processing webhook event ${event.type}:`, error);
+            // Still return 200 — processing bugs should not trigger Stripe retries
         }
+
+        return { received: true };
     }
 
     private async handleSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
-        const orderId = paymentIntent.metadata.orderId;
-
-        // Payment entity has no status column, so we skip updating it.
-        // Or if I missed it in view_file, let me double check. 
-        // Logic: The view_file output for Payment entity definitely did NOT show a status column.
-        // It showed paymentIntentId, amount, currency, gateway, metadata.
-        // So I will remove the paymentRepository.update calls that try to update status.
-        // Just update order status.
+        const orderId = paymentIntent.metadata?.orderId;
+        if (!orderId) {
+            this.logger.warn(`payment_intent.succeeded missing orderId in metadata: ${paymentIntent.id}`);
+            return;
+        }
 
         await this.orderRepository.update(orderId, {
             status: OrderStatus.PROCESSING,
             paymentStatus: PaymentStatus.PAID,
+            paymentIntentId: paymentIntent.id,
         });
 
         this.logger.log(`Payment succeeded for order ${orderId}`);
     }
 
     private async handleFailedPayment(paymentIntent: Stripe.PaymentIntent) {
-        const orderId = paymentIntent.metadata.orderId;
+        const orderId = paymentIntent.metadata?.orderId;
+        if (!orderId) {
+            this.logger.warn(`payment_intent.payment_failed missing orderId in metadata: ${paymentIntent.id}`);
+            return;
+        }
 
-        // No payment status to update
-        // await this.paymentRepository.update(
-        //     { paymentIntentId: paymentIntent.id },
-        //     { status: 'failed' }
-        // );
+        await this.orderRepository.update(orderId, {
+            paymentStatus: PaymentStatus.FAILED,
+        });
+
+        this.logger.warn(`Payment failed for order ${orderId}`);
+    }
+
+    private async handleCanceledPayment(paymentIntent: Stripe.PaymentIntent) {
+        const orderId = paymentIntent.metadata?.orderId;
+        if (!orderId) {
+            this.logger.warn(`payment_intent.canceled missing orderId in metadata: ${paymentIntent.id}`);
+            return;
+        }
 
         await this.orderRepository.update(orderId, {
             status: OrderStatus.CANCELLED,
             paymentStatus: PaymentStatus.FAILED,
         });
 
-        this.logger.error(`Payment failed for order ${orderId}`);
+        this.logger.log(`Payment canceled for order ${orderId}`);
     }
 }
