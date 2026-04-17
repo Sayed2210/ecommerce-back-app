@@ -243,6 +243,23 @@ export class MailerService {
         });
     }
 
+    async sendReturnStatusUpdate(to: string, data: {
+        orderNumber: string;
+        status: string;
+        isApproved: boolean;
+        refundAmount?: number;
+    }): Promise<void> {
+        const subject = data.isApproved
+            ? `Your return for order #${data.orderNumber} has been approved`
+            : `Update on your return request for order #${data.orderNumber}`;
+        await this.sendEmailAsync({
+            to,
+            subject,
+            template: 'return-status',
+            data,
+        });
+    }
+
     /**
      * Verify SMTP connection
      */

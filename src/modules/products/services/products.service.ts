@@ -9,6 +9,7 @@ import { FilterDto } from '../dtos/filter.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { SlugUtil } from '../../../common/utils/slug.util';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
+import { ElasticsearchService } from '../../search/services/elasticsearch.service';
 
 @Injectable()
 export class ProductsService {
@@ -17,6 +18,7 @@ export class ProductsService {
     constructor(
         private readonly productRepository: ProductRepository,
         private readonly cacheService: RedisService,
+        private readonly esService: ElasticsearchService,
         @InjectRepository(Product)
         private readonly productRepo: Repository<Product>,
     ) { }
@@ -40,6 +42,14 @@ export class ProductsService {
         });
 
         await this.cacheService.delete('products:all');
+
+        // Index in Elasticsearch — load with relations first; failure must not break CRUD
+        const full = await this.productRepo.findOne({
+            where: { id: product.id },
+            relations: ['category', 'brand'],
+        });
+        await this.indexSafely(full);
+
         return product;
     }
 
@@ -151,6 +161,14 @@ export class ProductsService {
         const updated = await this.productRepository.update(id, updateData);
         await this.cacheService.delete(`product:${id}`);
         await this.cacheService.delete('products:all');
+
+        // Re-index with latest data
+        const full = await this.productRepo.findOne({
+            where: { id },
+            relations: ['category', 'brand'],
+        });
+        await this.indexSafely(full);
+
         return updated;
     }
 
@@ -159,5 +177,27 @@ export class ProductsService {
         await this.productRepository.update(id, { isActive: false });
         await this.cacheService.delete(`product:${id}`);
         await this.cacheService.delete('products:all');
+
+        // Remove from search index — 404 from ES is handled inside deleteProduct
+        await this.deleteSafely(id);
+    }
+
+    // ── Private helpers ────────────────────────────────────────────────────────
+
+    private async indexSafely(product: Product | null): Promise<void> {
+        if (!product) return;
+        try {
+            await this.esService.indexProduct(product);
+        } catch (error) {
+            this.logger.warn(`Elasticsearch index failed for product ${product.id}: ${error.message}`);
+        }
+    }
+
+    private async deleteSafely(productId: string): Promise<void> {
+        try {
+            await this.esService.deleteProduct(productId);
+        } catch (error) {
+            this.logger.warn(`Elasticsearch delete failed for product ${productId}: ${error.message}`);
+        }
     }
 }

@@ -14,6 +14,8 @@ import { ProcessReturnDto } from '../dtos/process-return.dto';
 import { Order, OrderStatus, PaymentStatus } from '@modules/orders/entities/order.entity';
 import { OrderItem } from '@modules/orders/entities/order-item.entity';
 import { PaginationDto } from '@common/dtos/pagination.dto';
+import { ReturnRequestRepository } from '../repositories/return-request.repository';
+import { MailerService } from '@infrastructure/email/mailer.service';
 
 const RETURN_WINDOW_DAYS = 30;
 
@@ -22,13 +24,13 @@ export class ReturnsService {
     private readonly stripe: Stripe;
 
     constructor(
-        @InjectRepository(ReturnRequest)
-        private readonly returnRepository: Repository<ReturnRequest>,
+        private readonly returnRepository: ReturnRequestRepository,
         @InjectRepository(Order)
         private readonly orderRepository: Repository<Order>,
         @InjectRepository(OrderItem)
         private readonly orderItemRepository: Repository<OrderItem>,
         private readonly configService: ConfigService,
+        private readonly mailerService: MailerService,
     ) {
         this.stripe = new Stripe(this.configService.get('STRIPE_SECRET_KEY'), {
             apiVersion: '2023-10-16' as any,
@@ -61,11 +63,12 @@ export class ReturnsService {
         if (!orderItem) throw new NotFoundException('Order item not found');
 
         const existing = await this.returnRepository.findOne({
-            where: { order: { id: dto.orderId }, orderItem: { id: dto.orderItemId } },
+            order: { id: dto.orderId },
+            orderItem: { id: dto.orderItemId },
         });
         if (existing) throw new BadRequestException('Return request already submitted for this item');
 
-        const returnRequest = this.returnRepository.create({
+        return this.returnRepository.create({
             reason: dto.reason,
             notes: dto.notes,
             refundAmount: Number(orderItem.unitPrice) * orderItem.quantity,
@@ -73,8 +76,6 @@ export class ReturnsService {
             order: { id: dto.orderId },
             orderItem: { id: dto.orderItemId },
         });
-
-        return this.returnRepository.save(returnRequest);
     }
 
     async findAllForUser(userId: string, pagination: PaginationDto) {
@@ -101,7 +102,7 @@ export class ReturnsService {
     }
 
     async findOne(id: string, userId?: string): Promise<ReturnRequest> {
-        const returnRequest = await this.returnRepository.findOne({
+        const returnRequest = await this.returnRepository.findOneWithOptions({
             where: { id },
             relations: ['order', 'orderItem', 'user'],
         });
@@ -139,6 +140,20 @@ export class ReturnsService {
             returnRequest.status = ReturnStatus.REJECTED;
         }
 
-        return this.returnRepository.save(returnRequest);
+        const saved = await this.returnRepository.save(returnRequest);
+
+        // Notify customer of decision via email
+        const userEmail = returnRequest.user?.email;
+        if (userEmail) {
+            const isApproved = saved.status === ReturnStatus.APPROVED || saved.status === ReturnStatus.REFUNDED;
+            this.mailerService.sendReturnStatusUpdate(userEmail, {
+                orderNumber: returnRequest.order.orderNumber ?? returnRequest.order.id,
+                status: saved.status,
+                isApproved,
+                refundAmount: isApproved ? saved.refundAmount : undefined,
+            }).catch(() => { /* non-critical — log happens inside mailer */ });
+        }
+
+        return saved;
     }
 }

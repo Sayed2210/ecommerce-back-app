@@ -1,34 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { NotificationService } from '../services/notification.service';
+import { NotificationRepository } from '../repositories/notification.repository';
 import { Notification, NotificationType } from '../entities/notification.entity';
 import { CreateNotificationDto } from '../dto/notification.dto';
-
 import { NotificationsGateway } from '../services/websocket.gateway';
 
 describe('NotificationService', () => {
     let service: NotificationService;
     let notificationRepository: Record<string, jest.Mock>;
     let notificationsGateway: Record<string, jest.Mock>;
-    let queryBuilder: any;
 
     beforeEach(async () => {
-        queryBuilder = {
-            update: jest.fn().mockReturnThis(),
-            set: jest.fn().mockReturnThis(),
-            where: jest.fn().mockReturnThis(),
-            andWhere: jest.fn().mockReturnThis(),
-            execute: jest.fn(),
-        };
-
         notificationRepository = {
             create: jest.fn(),
             save: jest.fn(),
             findAndCount: jest.fn(),
             findOne: jest.fn(),
+            findOneOrFail: jest.fn(),
             remove: jest.fn(),
-            createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+            markAllReadByUser: jest.fn(),
         };
 
         notificationsGateway = {
@@ -38,7 +29,7 @@ describe('NotificationService', () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 NotificationService,
-                { provide: getRepositoryToken(Notification), useValue: notificationRepository },
+                { provide: NotificationRepository, useValue: notificationRepository },
                 { provide: NotificationsGateway, useValue: notificationsGateway },
             ],
         }).compile();
@@ -51,11 +42,10 @@ describe('NotificationService', () => {
     });
 
     describe('create', () => {
-        it('should create notification', async () => {
+        it('should create notification and emit real-time event', async () => {
             const dto: CreateNotificationDto = { userId: 'u1', type: NotificationType.SYSTEM, title: 'Test' };
             const notification = { id: 'n1', ...dto };
-            notificationRepository.create.mockReturnValue(notification);
-            notificationRepository.save.mockResolvedValue(notification);
+            notificationRepository.create.mockResolvedValue(notification);
 
             const result = await service.create(dto);
             expect(result).toBe(notification);
@@ -68,36 +58,49 @@ describe('NotificationService', () => {
             notificationRepository.findAndCount.mockResolvedValue([[], 0]);
             const result = await service.findAll('u1', { page: 1, limit: 10 });
             expect(result.data).toEqual([]);
+            expect(result.total).toBe(0);
         });
     });
 
     describe('markAsRead', () => {
-        it('should mark as read', async () => {
-            const notification = { id: 'n1', readAt: null };
+        it('should set readAt and save', async () => {
+            const notification = { id: 'n1', readAt: null } as any;
             notificationRepository.findOne.mockResolvedValue(notification);
             notificationRepository.save.mockResolvedValue({ ...notification, readAt: new Date() });
 
             const result = await service.markAsRead('n1');
             expect(result.readAt).toBeDefined();
+            expect(notificationRepository.save).toHaveBeenCalled();
+        });
+
+        it('should throw NotFoundException when notification not found', async () => {
+            notificationRepository.findOne.mockResolvedValue(null);
+            await expect(service.markAsRead('missing')).rejects.toThrow(NotFoundException);
         });
     });
 
     describe('markAllAsRead', () => {
-        it('should mark all as read', async () => {
+        it('should delegate to repository markAllReadByUser', async () => {
+            notificationRepository.markAllReadByUser.mockResolvedValue(undefined);
             await service.markAllAsRead('u1');
-            expect(notificationRepository.createQueryBuilder).toHaveBeenCalled();
-            expect(queryBuilder.update).toHaveBeenCalled();
-            expect(queryBuilder.execute).toHaveBeenCalled();
+            expect(notificationRepository.markAllReadByUser).toHaveBeenCalledWith('u1');
         });
     });
 
     describe('remove', () => {
-        it('should hard delete', async () => {
-            const notification = { id: 'n1' };
-            notificationRepository.findOne.mockResolvedValue(notification);
+        it('should find then permanently delete notification', async () => {
+            const notification = { id: 'n1' } as Notification;
+            notificationRepository.findOneOrFail.mockResolvedValue(notification);
+            notificationRepository.remove.mockResolvedValue(notification);
 
             await service.remove('n1');
+            expect(notificationRepository.findOneOrFail).toHaveBeenCalledWith({ id: 'n1' });
             expect(notificationRepository.remove).toHaveBeenCalledWith(notification);
+        });
+
+        it('should throw NotFoundException when notification not found', async () => {
+            notificationRepository.findOneOrFail.mockRejectedValue(new NotFoundException());
+            await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
         });
     });
 });

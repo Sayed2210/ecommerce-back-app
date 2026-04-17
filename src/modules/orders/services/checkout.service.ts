@@ -11,8 +11,10 @@ import { Coupon, CouponType } from '../entities/coupon.entity';
 import { OrderStatus } from '../entities/order.entity';
 import { PaymentService } from './payment.service';
 import { ShippingService } from './shipping.service';
+import { TaxService } from './tax.service';
 import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { Address } from '../../users/entities/address.entity';
 import { PaymentGateway } from '../entities';
 
 @Injectable()
@@ -23,6 +25,7 @@ export class CheckoutService {
         private readonly dataSource: DataSource,
         private readonly paymentService: PaymentService,
         private readonly shippingService: ShippingService,
+        private readonly taxService: TaxService,
         private readonly BullmqService: BullmqService,
         @InjectRepository(Coupon)
         private readonly couponRepository: Repository<Coupon>,
@@ -123,12 +126,18 @@ export class CheckoutService {
 
             totalAmount += shippingCost;
 
+            // Calculate tax based on shipping destination
+            const shippingAddress = await manager.findOne(Address, { where: { id: dto.shippingAddressId } });
+            const { taxAmount } = this.taxService.calculate(subtotal - discount, shippingAddress?.country);
+            totalAmount += taxAmount;
+
             // Create order
             const order = manager.create(Order, {
                 user: { id: userId },
                 items: [],
                 subtotal,
-                discountAmount: discount, // Entity has discountAmount, not discount
+                taxAmount,
+                discountAmount: discount,
                 shippingCost,
                 totalAmount,
                 status: OrderStatus.PENDING,

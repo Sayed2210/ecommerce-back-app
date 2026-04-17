@@ -6,6 +6,7 @@ import { AuthService } from '../services/auth.service';
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordService } from '../services/password.service';
 import { TokenService } from '../services/token.service';
+import { MailerService } from '@infrastructure/email/mailer.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { User } from '../entities/user.entity';
@@ -36,6 +37,11 @@ describe('AuthService', () => {
         jwtService = {};
         configService = {};
 
+        const mockMailerService = {
+            sendPasswordReset: jest.fn().mockResolvedValue(undefined),
+            sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 AuthService,
@@ -44,6 +50,7 @@ describe('AuthService', () => {
                 { provide: TokenService, useValue: tokenService },
                 { provide: JwtService, useValue: jwtService },
                 { provide: ConfigService, useValue: configService },
+                { provide: MailerService, useValue: mockMailerService },
             ],
         }).compile();
 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Return Request Update</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: {{#if isApproved}}#22c55e{{else}}#ef4444{{/if}}; color: #ffffff; padding: 32px 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .body { padding: 32px 24px; color: #374151; }
+    .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px; background: {{#if isApproved}}#dcfce7{{else}}#fee2e2{{/if}}; color: {{#if isApproved}}#15803d{{else}}#b91c1c{{/if}}; text-transform: uppercase; letter-spacing: 0.05em; }
+    .info-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px 20px; margin: 24px 0; }
+    .info-box p { margin: 0 0 8px 0; font-size: 14px; color: #6b7280; }
+    .info-box .value { font-size: 16px; font-weight: 600; color: #111827; }
+    .refund-amount { font-size: 28px; font-weight: 700; color: #22c55e; text-align: center; margin: 16px 0; }
+    .footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 24px; text-align: center; font-size: 12px; color: #9ca3af; }
+    .footer a { color: #6b7280; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{{#if isApproved}}Return Approved{{else}}Return Rejected{{/if}}</h1>
+      <p style="margin:8px 0 0;opacity:0.9;">Your return request has been reviewed</p>
+    </div>
+
+    <div class="body">
+      <p>We have processed your return request for order <strong>#{{orderNumber}}</strong>.</p>
+
+      <p>Decision: <span class="status-badge">{{status}}</span></p>
+
+      {{#if isApproved}}
+        <p>Great news — your return has been approved. Your refund is being processed.</p>
+
+        {{#if refundAmount}}
+          <div class="info-box">
+            <p>Refund Amount</p>
+            <div class="refund-amount">${{refundAmount}}</div>
+            <p style="margin:0;font-size:13px;">Refunds typically appear within 5–10 business days depending on your bank.</p>
+          </div>
+        {{/if}}
+      {{else}}
+        <p>Unfortunately, your return request for order <strong>#{{orderNumber}}</strong> could not be approved at this time.</p>
+        <p>If you believe this is an error or have questions, please contact our support team.</p>
+      {{/if}}
+
+      <p style="margin-top:24px;">If you have any questions, reach us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.</p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{appName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

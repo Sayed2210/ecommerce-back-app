@@ -1,25 +1,21 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { NewsletterSubscriber } from '../entities/newsletter-subscriber.entity';
 import { SendCampaignDto, SubscribeDto } from '../dtos/subscribe.dto';
 import { MailerService } from '@infrastructure/email/mailer.service';
 import { BullmqService } from '@infrastructure/queue/bullmq.service';
+import { NewsletterSubscriberRepository } from '../repositories/newsletter-subscriber.repository';
 
 @Injectable()
 export class NewsletterService {
     constructor(
-        @InjectRepository(NewsletterSubscriber)
-        private readonly subscriberRepository: Repository<NewsletterSubscriber>,
+        private readonly subscriberRepository: NewsletterSubscriberRepository,
         private readonly mailerService: MailerService,
         private readonly bullmqService: BullmqService,
     ) {}
 
     async subscribe(dto: SubscribeDto): Promise<{ message: string }> {
-        const existing = await this.subscriberRepository.findOne({
-            where: { email: dto.email },
-        });
+        const existing = await this.subscriberRepository.findOne({ email: dto.email });
 
         if (existing) {
             if (existing.isActive) throw new ConflictException('Email already subscribed');
@@ -30,13 +26,11 @@ export class NewsletterService {
             return { message: 'Successfully re-subscribed' };
         }
 
-        const subscriber = this.subscriberRepository.create({
+        await this.subscriberRepository.create({
             email: dto.email,
             name: dto.name,
             unsubscribeToken: crypto.randomUUID(),
         });
-
-        await this.subscriberRepository.save(subscriber);
 
         await this.mailerService.sendWelcomeEmail(dto.email, {
             name: dto.name ?? dto.email,
@@ -46,9 +40,7 @@ export class NewsletterService {
     }
 
     async unsubscribe(token: string): Promise<{ message: string }> {
-        const subscriber = await this.subscriberRepository.findOne({
-            where: { unsubscribeToken: token },
-        });
+        const subscriber = await this.subscriberRepository.findOne({ unsubscribeToken: token });
 
         if (!subscriber) throw new NotFoundException('Invalid unsubscribe token');
 

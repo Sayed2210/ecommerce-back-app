@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
 import { ProductRepository } from '../repositories/product.repository';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
+import { ElasticsearchService } from '../../search/services/elasticsearch.service';
 import { Product } from '../entities/product.entity';
 import { CreateProductDto } from '../dtos/create-product.dto';
 
@@ -48,12 +49,18 @@ describe('ProductsService', () => {
             update: jest.fn(),
         };
 
+        const mockElasticsearchService = {
+            indexProduct: jest.fn().mockResolvedValue(undefined),
+            deleteProduct: jest.fn().mockResolvedValue(undefined),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 ProductsService,
                 { provide: ProductRepository, useValue: productRepository },
                 { provide: RedisService, useValue: redisService },
                 { provide: getRepositoryToken(Product), useValue: productRepo },
+                { provide: ElasticsearchService, useValue: mockElasticsearchService },
             ],
         }).compile();
 

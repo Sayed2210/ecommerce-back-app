@@ -5,11 +5,14 @@ import { TagsService } from './services/tags.service';
 import { InventoryService } from './services/inventory.service';
 import { CategoriesService } from './services/categories.service';
 import { BrandsService } from './services/brands.service';
+import { ProductImagesService } from './services/images.service';
 import { ProductsController } from './controllers/products.controller';
 import { TagsController } from './controllers/tags.controller';
 import { CategoriesController } from './controllers/categories.controller';
 import { BrandsController } from './controllers/brands.controller';
+import { ProductImagesController } from './controllers/images.controller';
 import { Product } from './entities/product.entity';
+import { ProductImage } from './entities/product-image.entity';
 import { ProductRepository } from './repositories/product.repository';
 import { Category } from './entities/category.entity';
 import { CategoryRepository } from './repositories/category.repository';
@@ -21,16 +24,21 @@ import { Brand } from './entities/brand.entity';
 import { BrandRepository } from './repositories/brand.repository';
 import { InventoryAlertWorker } from './workers/inventory-alert.worker';
 import { MailerService } from '@infrastructure/email/mailer.service';
+import { SearchModule } from '../search/search.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Product, Category, ProductVariant, Tag, InventoryLog, Brand])],
-    controllers: [ProductsController, TagsController, CategoriesController, BrandsController],
+    imports: [
+        TypeOrmModule.forFeature([Product, ProductImage, Category, ProductVariant, Tag, InventoryLog, Brand]),
+        SearchModule,
+    ],
+    controllers: [ProductsController, TagsController, CategoriesController, BrandsController, ProductImagesController],
     providers: [
         ProductsService,
         TagsService,
         InventoryService,
         CategoriesService,
         BrandsService,
+        ProductImagesService,
         InventoryAlertWorker,
         MailerService,
         ProductRepository,

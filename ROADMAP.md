@@ -86,12 +86,12 @@
   - Password reset (token link, expiry notice)
   - Newsletter broadcast (unsubscribe link required)
 
-- [ ] **1.3** S3 product image upload endpoint
+- [x] **1.3** S3 product image upload endpoint
   - `POST /products/:id/images` — upload and store URL in `product_images`
   - `DELETE /products/:id/images/:imageId` — remove from S3 and DB
   - Reuse `S3Service` already in `src/infrastructure/storage/s3.service.ts`
 
-- [ ] **1.4** Elasticsearch indexing hooks
+- [x] **1.4** Elasticsearch indexing hooks
   - Index product on `ProductsService.create` and `ProductsService.update`
   - Remove from index on `ProductsService.softDelete`
   - Bulk re-index script for existing products
@@ -102,28 +102,28 @@
 
 > Scaffolded but not functional end-to-end.
 
-- [ ] **2.1** Returns: approve / reject / refund flow
+- [x] **2.1** Returns: approve / reject / refund flow
   - Admin endpoints: `PATCH /returns/:id/approve`, `PATCH /returns/:id/reject`
   - On approve: call Stripe refund API, update order `paymentStatus` to `refunded`
   - Emit notification to customer on status change
 
-- [ ] **2.2** Add repositories to `newsletter`, `notifications`, `returns`
+- [x] **2.2** Add repositories to `newsletter`, `notifications`, `returns`
   - Extend `AbstractRepository<T>` instead of raw TypeORM injection
   - Keeps the data-access pattern consistent across all modules
 
-- [ ] **2.3** Tax calculation service
+- [x] **2.3** Tax calculation service
   - Configurable rate per country/region via env or DB config table
   - Calculate and persist `taxAmount` during checkout
 
-- [ ] **2.4** Admin coupon management endpoints
+- [x] **2.4** Admin coupon management endpoints
   - Move or expose `CouponService` CRUD via `admin` module
   - Endpoints: list, create, update, deactivate, delete
 
-- [ ] **2.5** Inventory restock alert via BullMQ
+- [x] **2.5** Inventory restock alert via BullMQ
   - After each sale, check if stock falls below configurable threshold
   - Enqueue `low-stock` job → send email to admin
 
-- [ ] **2.6** Newsletter broadcast / send endpoint
+- [x] **2.6** Newsletter broadcast / send endpoint
   - `POST /newsletter/send` (admin only) — send to all active subscribers
   - Use email template from Phase 1.2
   - Enqueue sends via BullMQ to avoid timeout on large lists
