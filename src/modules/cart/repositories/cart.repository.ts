@@ -6,17 +6,17 @@ import { Cart } from '../entities/cart.entity';
 
 @Injectable()
 export class CartRepository extends AbstractRepository<Cart> {
-    constructor(
-        @InjectRepository(Cart)
-        private readonly cartRepository: Repository<Cart>,
-    ) {
-        super(cartRepository);
-    }
+  constructor(
+    @InjectRepository(Cart)
+    private readonly cartRepository: Repository<Cart>,
+  ) {
+    super(cartRepository);
+  }
 
-    async findByUserId(userId: string): Promise<Cart | null> {
-        return this.repository.findOne({
-            where: { user: { id: userId } },
-            relations: ['items', 'items.productVariant'],
-        });
-    }
+  async findByUserId(userId: string): Promise<Cart | null> {
+    return this.repository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.productVariant'],
+    });
+  }
 }

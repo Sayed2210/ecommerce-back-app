@@ -19,21 +19,21 @@ import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Order, OrderItem, Payment, Shipping, Coupon]),
-        CartModule,
-        UsersModule,
-    ],
-    controllers: [OrdersController, CheckoutController, CouponsController],
-    providers: [
-        OrdersService,
-        CheckoutService,
-        PaymentService,
-        ShippingService,
-        TaxService,
-        CouponService,
-        OrderRepository,
-    ],
-    exports: [OrdersService, OrderRepository, PaymentService],
+  imports: [
+    TypeOrmModule.forFeature([Order, OrderItem, Payment, Shipping, Coupon]),
+    CartModule,
+    UsersModule,
+  ],
+  controllers: [OrdersController, CheckoutController, CouponsController],
+  providers: [
+    OrdersService,
+    CheckoutService,
+    PaymentService,
+    ShippingService,
+    TaxService,
+    CouponService,
+    OrderRepository,
+  ],
+  exports: [OrdersService, OrderRepository, PaymentService],
 })
-export class OrdersModule { }
+export class OrdersModule {}

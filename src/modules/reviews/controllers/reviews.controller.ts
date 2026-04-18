@@ -1,5 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  Request,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ReviewsService } from '../services/reviews.service';
 import { CreateReviewDto } from '../dtos/create-review.dto';
 import { UpdateReviewDto } from '../dtos/update-review.dto';
@@ -9,53 +27,72 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewsController {
-    constructor(private readonly reviewsService: ReviewsService) { }
+  constructor(private readonly reviewsService: ReviewsService) {}
 
-    @Post()
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
-    @HttpCode(HttpStatus.CREATED)
-    @ApiOperation({ summary: 'Create review', description: 'Create a product review' })
-    @ApiResponse({ status: 201, description: 'Review created' })
-    @ApiResponse({ status: 400, description: 'Invalid input' })
-    create(@Request() req, @Body() createReviewDto: CreateReviewDto) {
-        return this.reviewsService.create(req.user.id, createReviewDto);
-    }
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create review',
+    description: 'Create a product review',
+  })
+  @ApiResponse({ status: 201, description: 'Review created' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  create(@Request() req, @Body() createReviewDto: CreateReviewDto) {
+    return this.reviewsService.create(req.user.id, createReviewDto);
+  }
 
-    @Get('product/:productId')
-    @ApiOperation({ summary: 'Get product reviews', description: 'Get all reviews for a product' })
-    @ApiResponse({ status: 200, description: 'Reviews retrieved' })
-    findAll(@Param('productId') productId: string, @Query() pagination: PaginationDto) {
-        return this.reviewsService.findAll(productId, pagination);
-    }
+  @Get('product/:productId')
+  @ApiOperation({
+    summary: 'Get product reviews',
+    description: 'Get all reviews for a product',
+  })
+  @ApiResponse({ status: 200, description: 'Reviews retrieved' })
+  findAll(
+    @Param('productId') productId: string,
+    @Query() pagination: PaginationDto,
+  ) {
+    return this.reviewsService.findAll(productId, pagination);
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Get review details', description: 'Get detailed review information' })
-    @ApiResponse({ status: 200, description: 'Review retrieved' })
-    @ApiResponse({ status: 404, description: 'Review not found' })
-    findOne(@Param('id') id: string) {
-        return this.reviewsService.findOne(id);
-    }
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get review details',
+    description: 'Get detailed review information',
+  })
+  @ApiResponse({ status: 200, description: 'Review retrieved' })
+  @ApiResponse({ status: 404, description: 'Review not found' })
+  findOne(@Param('id') id: string) {
+    return this.reviewsService.findOne(id);
+  }
 
-    @Patch(':id')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Update review', description: 'Update an existing review' })
-    @ApiResponse({ status: 200, description: 'Review updated' })
-    @ApiResponse({ status: 403, description: 'Forbidden' })
-    @ApiResponse({ status: 404, description: 'Review not found' })
-    update(@Request() req, @Param('id') id: string, @Body() updateReviewDto: UpdateReviewDto) {
-        return this.reviewsService.update(id, req.user.id, updateReviewDto);
-    }
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update review',
+    description: 'Update an existing review',
+  })
+  @ApiResponse({ status: 200, description: 'Review updated' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Review not found' })
+  update(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() updateReviewDto: UpdateReviewDto,
+  ) {
+    return this.reviewsService.update(id, req.user.id, updateReviewDto);
+  }
 
-    @Delete(':id')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Delete review', description: 'Delete a review' })
-    @ApiResponse({ status: 200, description: 'Review deleted' })
-    @ApiResponse({ status: 403, description: 'Forbidden' })
-    @ApiResponse({ status: 404, description: 'Review not found' })
-    remove(@Request() req, @Param('id') id: string) {
-        return this.reviewsService.remove(id, req.user.id);
-    }
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete review', description: 'Delete a review' })
+  @ApiResponse({ status: 200, description: 'Review deleted' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Review not found' })
+  remove(@Request() req, @Param('id') id: string) {
+    return this.reviewsService.remove(id, req.user.id);
+  }
 }

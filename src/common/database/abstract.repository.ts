@@ -1,68 +1,76 @@
-import { Repository as TypeORMRepository, SelectQueryBuilder, ObjectLiteral, FindOptionsWhere, DeepPartial, FindManyOptions, FindOneOptions } from 'typeorm';
+import {
+  Repository as TypeORMRepository,
+  SelectQueryBuilder,
+  ObjectLiteral,
+  FindOptionsWhere,
+  DeepPartial,
+  FindManyOptions,
+  FindOneOptions,
+} from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { NotFoundException } from '@nestjs/common';
 
 export abstract class AbstractRepository<T extends ObjectLiteral> {
-    constructor(protected readonly repository: TypeORMRepository<T>) { }
+  constructor(protected readonly repository: TypeORMRepository<T>) {}
 
+  protected createQueryBuilder(alias?: string): SelectQueryBuilder<T> {
+    return this.repository.createQueryBuilder(
+      alias || this.repository.metadata.name.toLowerCase(),
+    );
+  }
 
-    protected createQueryBuilder(alias?: string): SelectQueryBuilder<T> {
-        return this.repository.createQueryBuilder(alias || this.repository.metadata.name.toLowerCase());
+  async findOne(where: FindOptionsWhere<T>): Promise<T | null> {
+    return this.repository.findOne({ where });
+  }
+
+  async findOneOrFail(where: FindOptionsWhere<T>): Promise<T> {
+    const entity = await this.repository.findOne({ where });
+    if (!entity) {
+      throw new NotFoundException('Resource not found');
     }
+    return entity;
+  }
 
+  async findAll(options?: FindManyOptions<T>): Promise<T[]> {
+    return this.repository.find(options);
+  }
 
-    async findOne(where: FindOptionsWhere<T>): Promise<T | null> {
-        return this.repository.findOne({ where });
-    }
+  async findWithPagination(
+    page: number = 1,
+    limit: number = 10,
+    where?: FindOptionsWhere<T>,
+  ): Promise<{ data: T[]; total: number; page: number; limit: number }> {
+    const [data, total] = await this.repository.findAndCount({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit };
+  }
 
-    async findOneOrFail(where: FindOptionsWhere<T>): Promise<T> {
-        const entity = await this.repository.findOne({ where });
-        if (!entity) {
-            throw new NotFoundException('Resource not found');
-        }
-        return entity;
-    }
+  async create(data: DeepPartial<T>): Promise<T> {
+    const entity = this.repository.create(data);
+    return this.repository.save(entity);
+  }
 
-    async findAll(options?: FindManyOptions<T>): Promise<T[]> {
-        return this.repository.find(options);
-    }
+  async update(id: string, data: QueryDeepPartialEntity<T>): Promise<T> {
+    await this.repository.update(id, data);
+    return this.findOneOrFail({ id } as unknown as FindOptionsWhere<T>);
+  }
 
-    async findWithPagination(
-        page: number = 1,
-        limit: number = 10,
-        where?: FindOptionsWhere<T>,
-    ): Promise<{ data: T[]; total: number; page: number; limit: number }> {
-        const [data, total] = await this.repository.findAndCount({
-            where,
-            skip: (page - 1) * limit,
-            take: limit,
-        });
-        return { data, total, page, limit };
-    }
+  async softDelete(id: string): Promise<void> {
+    await this.repository.softDelete(id);
+  }
 
-    async create(data: DeepPartial<T>): Promise<T> {
-        const entity = this.repository.create(data);
-        return this.repository.save(entity);
-    }
+  async restore(id: string): Promise<void> {
+    await this.repository.restore(id);
+  }
 
-    async update(id: string, data: QueryDeepPartialEntity<T>): Promise<T> {
-        await this.repository.update(id, data);
-        return this.findOneOrFail({ id } as unknown as FindOptionsWhere<T>);
-    }
+  async permanentDelete(id: string): Promise<void> {
+    await this.repository.delete(id);
+  }
 
-    async softDelete(id: string): Promise<void> {
-        await this.repository.softDelete(id);
-    }
-
-    async restore(id: string): Promise<void> {
-        await this.repository.restore(id);
-    }
-
-    async permanentDelete(id: string): Promise<void> {
-        await this.repository.delete(id);
-    }
-
-    async findOneWithOptions(options: FindOneOptions<T>): Promise<T | null> {
-        return this.repository.findOne(options);
-    }
+  async findOneWithOptions(options: FindOneOptions<T>): Promise<T | null> {
+    return this.repository.findOne(options);
+  }
 }

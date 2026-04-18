@@ -9,9 +9,9 @@ import { OrderItem } from '@modules/orders/entities/order-item.entity';
 import { MailerService } from '@infrastructure/email/mailer.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([ReturnRequest, Order, OrderItem])],
-    controllers: [ReturnsController],
-    providers: [ReturnsService, ReturnRequestRepository, MailerService],
-    exports: [ReturnsService],
+  imports: [TypeOrmModule.forFeature([ReturnRequest, Order, OrderItem])],
+  controllers: [ReturnsController],
+  providers: [ReturnsService, ReturnRequestRepository, MailerService],
+  exports: [ReturnsService],
 })
 export class ReturnsModule {}

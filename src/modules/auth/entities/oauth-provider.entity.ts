@@ -1,4 +1,3 @@
-
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@common/entities/base.entity';
 import { User } from './user.entity';
@@ -22,7 +21,7 @@ export class OAuthProvider extends BaseEntity {
   @Column({ name: 'refresh_token', nullable: true })
   refreshToken?: string;
 
-  @ManyToOne(() => User, user => user.oauthProviders, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.oauthProviders, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 }

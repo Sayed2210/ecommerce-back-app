@@ -13,11 +13,9 @@ import { StaffController } from './controllers/staff.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Staff, AuditLog, Order, User, Product]),
-    ],
-    controllers: [DashboardController, StaffController, AnalyticsController],
-    providers: [StaffService, AnalyticsService, DashboardService],
-    exports: [StaffService, AnalyticsService],
+  imports: [TypeOrmModule.forFeature([Staff, AuditLog, Order, User, Product])],
+  controllers: [DashboardController, StaffController, AnalyticsController],
+  providers: [StaffService, AnalyticsService, DashboardService],
+  exports: [StaffService, AnalyticsService],
 })
-export class AdminModule { }
+export class AdminModule {}

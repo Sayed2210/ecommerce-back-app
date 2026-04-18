@@ -19,33 +19,39 @@ import { HttpModule } from '@nestjs/axios';
 import { MailerService } from '@/infrastructure/email/mailer.service';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([User, RefreshToken, OAuthProvider]),
-        PassportModule.register({ defaultStrategy: 'jwt' }),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET'),
-                signOptions: {
-                    expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
-                },
-            }),
-        }),
-        UsersModule,
-        HttpModule,
-    ],
-    controllers: [AuthController],
-    providers: [
-        AuthService,
-        TokenService,
-        PasswordService,
-        OAuthService,
-        JwtStrategy,
-        JwtRefreshStrategy,
-        UserRepository,
-        MailerService
-    ],
-    exports: [AuthService, TokenService, TypeOrmModule, JwtModule, PassportModule],
+  imports: [
+    TypeOrmModule.forFeature([User, RefreshToken, OAuthProvider]),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+        },
+      }),
+    }),
+    UsersModule,
+    HttpModule,
+  ],
+  controllers: [AuthController],
+  providers: [
+    AuthService,
+    TokenService,
+    PasswordService,
+    OAuthService,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    UserRepository,
+    MailerService,
+  ],
+  exports: [
+    AuthService,
+    TokenService,
+    TypeOrmModule,
+    JwtModule,
+    PassportModule,
+  ],
 })
-export class AuthModule { }
+export class AuthModule {}

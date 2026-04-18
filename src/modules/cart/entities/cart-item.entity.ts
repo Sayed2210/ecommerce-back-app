@@ -7,20 +7,25 @@ import { ProductVariant } from '@modules/products/entities/product-variant.entit
 
 @Entity('cart_items')
 export class CartItem extends BaseEntity {
-    @Column()
-    quantity: number;
+  @Column()
+  quantity: number;
 
-    @ManyToOne(() => Cart, cart => cart.items, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'cart_id' })
-    cart: Cart;
+  @ManyToOne(() => Cart, (cart) => cart.items, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'cart_id' })
+  cart: Cart;
 
-    @ManyToOne(() => Product, product => product.cartItems, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'product_id' })
-    product: Product;
+  @ManyToOne(() => Product, (product) => product.cartItems, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'product_id' })
+  product: Product;
 
-    @ManyToOne(() => ProductVariant, variant => variant.cartItems, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'variant_id' })
-    variant?: ProductVariant;
+  @ManyToOne(() => ProductVariant, (variant) => variant.cartItems, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'variant_id' })
+  variant?: ProductVariant;
 
-    totalPrice?: number;
+  totalPrice?: number;
 }

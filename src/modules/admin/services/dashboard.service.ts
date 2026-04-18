@@ -13,11 +13,11 @@ export interface DashboardStats {
 
 @Injectable()
 export class DashboardService {
-  constructor(
-    private dataSource: DataSource,
-  ) { }
+  constructor(private dataSource: DataSource) {}
 
-  async getStats(timeRange: '7d' | '30d' | '90d' | '1y' = '30d'): Promise<DashboardStats> {
+  async getStats(
+    timeRange: '7d' | '30d' | '90d' | '1y' = '30d',
+  ): Promise<DashboardStats> {
     const days = this.getDaysFromRange(timeRange);
     const startDate = subDays(new Date(), days);
 
@@ -58,7 +58,11 @@ export class DashboardService {
       .from('orders', 'orders')
       .innerJoin('order_items', 'items', 'items.order_id = orders.id')
       .innerJoin('products', 'products', 'products.id = items.product_id')
-      .innerJoin('categories', 'categories', 'categories.id = products.category_id')
+      .innerJoin(
+        'categories',
+        'categories',
+        'categories.id = products.category_id',
+      )
       .where('orders.created_at >= :startDate', { startDate })
       .groupBy('categories.name')
       .orderBy('revenue', 'DESC')
@@ -68,7 +72,10 @@ export class DashboardService {
     const userStats = await this.dataSource
       .createQueryBuilder()
       .select('COUNT(DISTINCT user_id)', 'totalCustomers')
-      .addSelect('COUNT(CASE WHEN created_at >= :recent THEN 1 END)', 'newCustomers')
+      .addSelect(
+        'COUNT(CASE WHEN created_at >= :recent THEN 1 END)',
+        'newCustomers',
+      )
       .from('orders', 'orders')
       .where('created_at >= :startDate', { startDate })
       .setParameters({ startDate, recent: subDays(new Date(), 7) })
@@ -80,20 +87,35 @@ export class DashboardService {
       categoryStats,
       userStats,
       summary: {
-        totalRevenue: salesStats.reduce((sum, day) => sum + parseFloat(day.revenue), 0),
-        totalOrders: salesStats.reduce((sum, day) => sum + parseInt(day.orders), 0),
-        avgOrderValue: salesStats.reduce((sum, day) => sum + parseFloat(day.avgordervalue), 0) / salesStats.length,
+        totalRevenue: salesStats.reduce(
+          (sum, day) => sum + parseFloat(day.revenue),
+          0,
+        ),
+        totalOrders: salesStats.reduce(
+          (sum, day) => sum + parseInt(day.orders),
+          0,
+        ),
+        avgOrderValue:
+          salesStats.reduce(
+            (sum, day) => sum + parseFloat(day.avgordervalue),
+            0,
+          ) / salesStats.length,
       },
     };
   }
 
   private getDaysFromRange(range: string): number {
     switch (range) {
-      case '7d': return 7;
-      case '30d': return 30;
-      case '90d': return 90;
-      case '1y': return 365;
-      default: return 30;
+      case '7d':
+        return 7;
+      case '30d':
+        return 30;
+      case '90d':
+        return 90;
+      case '1y':
+        return 365;
+      default:
+        return 30;
     }
   }
 }

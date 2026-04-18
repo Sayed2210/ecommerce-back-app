@@ -6,13 +6,12 @@ import { Coupon } from '../entities/coupon.entity';
 
 @Injectable()
 export class CouponRepository extends AbstractRepository<Coupon> {
-    constructor(
-        @InjectRepository(Coupon)
-        private readonly couponRepository: Repository<Coupon>,
-    ) {
-        super(couponRepository);
-    }
+  constructor(
+    @InjectRepository(Coupon)
+    private readonly couponRepository: Repository<Coupon>,
+  ) {
+    super(couponRepository);
+  }
 
-    // Custom methods specific to Coupon can be added here
-    
+  // Custom methods specific to Coupon can be added here
 }

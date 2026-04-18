@@ -3,38 +3,37 @@ import { ApiProperty } from '@nestjs/swagger';
 import { PaymentGateway } from '../entities/payment.entity';
 
 export class CreateOrderDto {
-    @ApiProperty({
-        description: 'Shipping address ID for order delivery',
-        example: '123e4567-e89b-12d3-a456-426614174000',
-    })
-    @IsString()
-    @IsNotEmpty()
-    shippingAddressId: string;
+  @ApiProperty({
+    description: 'Shipping address ID for order delivery',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsString()
+  @IsNotEmpty()
+  shippingAddressId: string;
 
-    @ApiProperty({
-        description: 'Coupon code for discount (optional)',
-        example: 'SUMMER2024',
-        required: false,
-    })
-    @IsString()
-    @IsOptional()
-    couponCode?: string;
+  @ApiProperty({
+    description: 'Coupon code for discount (optional)',
+    example: 'SUMMER2024',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  couponCode?: string;
 
-    @ApiProperty({
-        description: 'Payment method',
-        example: PaymentGateway.STRIPE,
-        enum: PaymentGateway,
-    })
-    @IsEnum(PaymentGateway)
-    paymentMethod: PaymentGateway;
+  @ApiProperty({
+    description: 'Payment method',
+    example: PaymentGateway.STRIPE,
+    enum: PaymentGateway,
+  })
+  @IsEnum(PaymentGateway)
+  paymentMethod: PaymentGateway;
 
-    @ApiProperty({
-        description: 'Payment token from payment gateway (optional)',
-        example: 'tok_1234567890abcdef',
-        required: false,
-    })
-    @IsString()
-    @IsOptional()
-    paymentToken?: string;
+  @ApiProperty({
+    description: 'Payment token from payment gateway (optional)',
+    example: 'tok_1234567890abcdef',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  paymentToken?: string;
 }
-

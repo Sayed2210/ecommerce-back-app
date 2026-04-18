@@ -7,8 +7,8 @@ import { ElasticsearchHealthIndicator } from './indicators/elasticsearch.health'
 import { SearchModule } from '@modules/search/search.module';
 
 @Module({
-    imports: [TerminusModule, TypeOrmModule, SearchModule],
-    controllers: [HealthController],
-    providers: [RedisHealthIndicator, ElasticsearchHealthIndicator],
+  imports: [TerminusModule, TypeOrmModule, SearchModule],
+  controllers: [HealthController],
+  providers: [RedisHealthIndicator, ElasticsearchHealthIndicator],
 })
 export class HealthModule {}

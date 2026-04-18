@@ -12,72 +12,72 @@ import { Notification } from '@modules/notifications/entities/notification.entit
 import { AuditLog } from '@modules/admin/entities/audit-log.entity';
 
 export enum UserRole {
-    CUSTOMER = 'customer',
-    STAFF = 'staff',
-    ADMIN = 'admin',
+  CUSTOMER = 'customer',
+  STAFF = 'staff',
+  ADMIN = 'admin',
 }
 
 @Entity('users')
 export class User extends BaseEntity {
-    @Column({ unique: true, length: 255 })
-    @Index()
-    email: string;
+  @Column({ unique: true, length: 255 })
+  @Index()
+  email: string;
 
-    @Column({ name: 'password_hash' })
-    passwordHash: string;
+  @Column({ name: 'password_hash' })
+  passwordHash: string;
 
-    @Column({ name: 'first_name', length: 100 })
-    firstName: string;
+  @Column({ name: 'first_name', length: 100 })
+  firstName: string;
 
-    @Column({ name: 'last_name', length: 100 })
-    lastName: string;
+  @Column({ name: 'last_name', length: 100 })
+  lastName: string;
 
-    @Column({ nullable: true, length: 20 })
-    phone?: string;
+  @Column({ nullable: true, length: 20 })
+  phone?: string;
 
-    @Column({ name: 'avatar_url', nullable: true })
-    avatarUrl?: string;
+  @Column({ name: 'avatar_url', nullable: true })
+  avatarUrl?: string;
 
-    @Column({ name: 'is_email_verified', default: false })
-    isEmailVerified: boolean;
+  @Column({ name: 'is_email_verified', default: false })
+  isEmailVerified: boolean;
 
-    @Column({ name: 'is_active', default: true })
-    isActive: boolean;
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
-    @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
-    role: UserRole;
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
+  role: UserRole;
 
-    @Column({ name: 'last_login', nullable: true })
-    lastLogin?: Date;
+  @Column({ name: 'last_login', nullable: true })
+  lastLogin?: Date;
 
-    @Column({ type: 'jsonb', default: {} })
-    metadata: Record<string, any>;
+  @Column({ type: 'jsonb', default: {} })
+  metadata: Record<string, any>;
 
-    // Relationships
-    @OneToMany(() => Address, address => address.user)
-    addresses: Address[];
+  // Relationships
+  @OneToMany(() => Address, (address) => address.user)
+  addresses: Address[];
 
-    @OneToMany(() => RefreshToken, token => token.user)
-    refreshTokens: RefreshToken[];
+  @OneToMany(() => RefreshToken, (token) => token.user)
+  refreshTokens: RefreshToken[];
 
-    @OneToMany(() => OAuthProvider, provider => provider.user)
-    oauthProviders: OAuthProvider[];
+  @OneToMany(() => OAuthProvider, (provider) => provider.user)
+  oauthProviders: OAuthProvider[];
 
-    @OneToMany(() => Order, order => order.user)
-    orders: Order[];
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 
-    @OneToMany(() => Review, review => review.user)
-    reviews: Review[];
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
 
-    @OneToMany(() => Wishlist, wishlist => wishlist.user)
-    wishlist: Wishlist[];
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
+  wishlist: Wishlist[];
 
-    @OneToMany(() => Cart, cart => cart.user)
-    cart: Cart[];
+  @OneToMany(() => Cart, (cart) => cart.user)
+  cart: Cart[];
 
-    @OneToMany(() => Notification, notification => notification.user)
-    notifications: Notification[];
+  @OneToMany(() => Notification, (notification) => notification.user)
+  notifications: Notification[];
 
-    @OneToMany(() => AuditLog, log => log.user)
-    auditLogs: AuditLog[];
+  @OneToMany(() => AuditLog, (log) => log.user)
+  auditLogs: AuditLog[];
 }

@@ -7,9 +7,9 @@ import { SearchController } from './controllers/search.controller';
 import { Product } from '@modules/products/entities/product.entity';
 
 @Module({
-    imports: [ConfigModule, TypeOrmModule.forFeature([Product])],
-    controllers: [SearchController],
-    providers: [SearchService, ElasticsearchService],
-    exports: [SearchService, ElasticsearchService],
+  imports: [ConfigModule, TypeOrmModule.forFeature([Product])],
+  controllers: [SearchController],
+  providers: [SearchService, ElasticsearchService],
+  exports: [SearchService, ElasticsearchService],
 })
-export class SearchModule { }
+export class SearchModule {}

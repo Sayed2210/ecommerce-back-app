@@ -10,11 +10,15 @@ export class RecommendationsService {
     private readonly userRepository: UserRepository,
     private readonly orderRepository: OrderRepository,
     private readonly productRepository: ProductRepository,
-  ) { }
+  ) {}
 
-  async getFrequentlyBoughtTogether(productId: string, limit = 5): Promise<Product[]> {
-    const frequentlyBought = await this.orderRepository.getFrequentlyBoughtTogether(productId, limit);
-    const productIds = frequentlyBought.map(f => f.productId);
+  async getFrequentlyBoughtTogether(
+    productId: string,
+    limit = 5,
+  ): Promise<Product[]> {
+    const frequentlyBought =
+      await this.orderRepository.getFrequentlyBoughtTogether(productId, limit);
+    const productIds = frequentlyBought.map((f) => f.productId);
     return this.productRepository.findByIds(productIds);
   }
 
@@ -26,10 +30,18 @@ export class RecommendationsService {
 
     if (!product) return [];
 
-    return this.productRepository.findSimilarProducts(productId, product.category.id, product.brand.id, limit);
+    return this.productRepository.findSimilarProducts(
+      productId,
+      product.category.id,
+      product.brand.id,
+      limit,
+    );
   }
 
-  async getPersonalizedRecommendations(userId: string, limit = 10): Promise<Product[]> {
+  async getPersonalizedRecommendations(
+    userId: string,
+    limit = 10,
+  ): Promise<Product[]> {
     const user = await this.userRepository.findOneWithOptions({
       where: { id: userId },
       relations: ['orders', 'orders.items', 'wishlist'],
@@ -38,17 +50,28 @@ export class RecommendationsService {
     if (!user) return [];
 
     const categoryIds = [
-      ...user.orders.flatMap(order => order.items.map(item => item.product.category.id)),
-      ...user.wishlist.map(item => item.product.category.id),
+      ...user.orders.flatMap((order) =>
+        order.items.map((item) => item.product.category.id),
+      ),
+      ...user.wishlist.map((item) => item.product.category.id),
     ];
 
     const topCategoryIds = Object.entries(
-      categoryIds.reduce((acc: Record<string, number>, catId) => ({ ...acc, [catId]: (acc[catId] || 0) + 1 }), {}),
+      categoryIds.reduce(
+        (acc: Record<string, number>, catId) => ({
+          ...acc,
+          [catId]: (acc[catId] || 0) + 1,
+        }),
+        {},
+      ),
     )
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([id]) => id);
 
-    return this.productRepository.findByCategoriesWithRating(topCategoryIds, limit);
+    return this.productRepository.findByCategoriesWithRating(
+      topCategoryIds,
+      limit,
+    );
   }
 }

@@ -6,12 +6,12 @@ import { Brand } from '../entities/brand.entity';
 
 @Injectable()
 export class BrandRepository extends AbstractRepository<Brand> {
-    constructor(
-        @InjectRepository(Brand)
-        private readonly brandRepository: Repository<Brand>,
-    ) {
-        super(brandRepository);
-    }
+  constructor(
+    @InjectRepository(Brand)
+    private readonly brandRepository: Repository<Brand>,
+  ) {
+    super(brandRepository);
+  }
 
-    // Custom methods specific to Brand can be added here
+  // Custom methods specific to Brand can be added here
 }

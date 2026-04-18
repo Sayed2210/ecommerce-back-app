@@ -7,9 +7,9 @@ import { NewsletterSubscriberRepository } from './repositories/newsletter-subscr
 import { MailerService } from '@infrastructure/email/mailer.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([NewsletterSubscriber])],
-    controllers: [NewsletterController],
-    providers: [NewsletterService, NewsletterSubscriberRepository, MailerService],
-    exports: [NewsletterService],
+  imports: [TypeOrmModule.forFeature([NewsletterSubscriber])],
+  controllers: [NewsletterController],
+  providers: [NewsletterService, NewsletterSubscriberRepository, MailerService],
+  exports: [NewsletterService],
 })
 export class NewsletterModule {}
