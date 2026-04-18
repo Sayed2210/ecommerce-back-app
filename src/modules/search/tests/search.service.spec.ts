@@ -5,80 +5,92 @@ import { ElasticsearchService } from '../services/elasticsearch.service';
 import { Product } from '@modules/products/entities/product.entity';
 
 describe('SearchService', () => {
-    let service: SearchService;
-    let elasticsearchService: Record<string, jest.Mock>;
-    let productRepository: Record<string, jest.Mock>;
+  let service: SearchService;
+  let elasticsearchService: Record<string, jest.Mock>;
+  let productRepository: Record<string, jest.Mock>;
 
-    beforeEach(async () => {
-        elasticsearchService = {
-            search: jest.fn(),
-            bulkIndex: jest.fn(),
-        };
+  beforeEach(async () => {
+    elasticsearchService = {
+      search: jest.fn(),
+      bulkIndex: jest.fn(),
+    };
 
-        productRepository = {
-            find: jest.fn(),
-        };
+    productRepository = {
+      find: jest.fn(),
+    };
 
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                SearchService,
-                { provide: ElasticsearchService, useValue: elasticsearchService },
-                { provide: getRepositoryToken(Product), useValue: productRepository },
-            ],
-        }).compile();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SearchService,
+        { provide: ElasticsearchService, useValue: elasticsearchService },
+        { provide: getRepositoryToken(Product), useValue: productRepository },
+      ],
+    }).compile();
 
-        service = module.get<SearchService>(SearchService);
+    service = module.get<SearchService>(SearchService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('search', () => {
+    it('delegates to elasticsearchService.search with query and dto', async () => {
+      const searchResult = { products: [{ id: 'p1' }], total: 1 };
+      elasticsearchService.search.mockResolvedValue(searchResult);
+
+      const dto = { query: 'headphones', page: 1, limit: 10 };
+      const result = await service.search(dto as any);
+
+      expect(elasticsearchService.search).toHaveBeenCalledWith(
+        'headphones',
+        dto,
+      );
+      expect(result).toBe(searchResult);
     });
 
-    afterEach(() => jest.clearAllMocks());
+    it('passes empty string when query is undefined', async () => {
+      elasticsearchService.search.mockResolvedValue({ products: [], total: 0 });
 
-    it('should be defined', () => {
-        expect(service).toBeDefined();
+      await service.search({ page: 1, limit: 10 } as any);
+
+      expect(elasticsearchService.search).toHaveBeenCalledWith(
+        '',
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('reindexAll', () => {
+    it('loads all products with relations and calls bulkIndex', async () => {
+      const products = [{ id: 'p1' }, { id: 'p2' }];
+      productRepository.find.mockResolvedValue(products);
+      elasticsearchService.bulkIndex.mockResolvedValue({
+        indexed: 2,
+        errors: 0,
+      });
+
+      const result = await service.reindexAll();
+
+      expect(productRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ relations: ['category', 'brand'] }),
+      );
+      expect(elasticsearchService.bulkIndex).toHaveBeenCalledWith(products);
+      expect(result).toEqual({ indexed: 2, errors: 0 });
     });
 
-    describe('search', () => {
-        it('delegates to elasticsearchService.search with query and dto', async () => {
-            const searchResult = { products: [{ id: 'p1' }], total: 1 };
-            elasticsearchService.search.mockResolvedValue(searchResult);
+    it('returns { indexed: 0, errors: 0 } when no products exist', async () => {
+      productRepository.find.mockResolvedValue([]);
+      elasticsearchService.bulkIndex.mockResolvedValue({
+        indexed: 0,
+        errors: 0,
+      });
 
-            const dto = { query: 'headphones', page: 1, limit: 10 };
-            const result = await service.search(dto as any);
+      const result = await service.reindexAll();
 
-            expect(elasticsearchService.search).toHaveBeenCalledWith('headphones', dto);
-            expect(result).toBe(searchResult);
-        });
-
-        it('passes empty string when query is undefined', async () => {
-            elasticsearchService.search.mockResolvedValue({ products: [], total: 0 });
-
-            await service.search({ page: 1, limit: 10 } as any);
-
-            expect(elasticsearchService.search).toHaveBeenCalledWith('', expect.any(Object));
-        });
+      expect(result).toEqual({ indexed: 0, errors: 0 });
     });
-
-    describe('reindexAll', () => {
-        it('loads all products with relations and calls bulkIndex', async () => {
-            const products = [{ id: 'p1' }, { id: 'p2' }];
-            productRepository.find.mockResolvedValue(products);
-            elasticsearchService.bulkIndex.mockResolvedValue({ indexed: 2, errors: 0 });
-
-            const result = await service.reindexAll();
-
-            expect(productRepository.find).toHaveBeenCalledWith(
-                expect.objectContaining({ relations: ['category', 'brand'] }),
-            );
-            expect(elasticsearchService.bulkIndex).toHaveBeenCalledWith(products);
-            expect(result).toEqual({ indexed: 2, errors: 0 });
-        });
-
-        it('returns { indexed: 0, errors: 0 } when no products exist', async () => {
-            productRepository.find.mockResolvedValue([]);
-            elasticsearchService.bulkIndex.mockResolvedValue({ indexed: 0, errors: 0 });
-
-            const result = await service.reindexAll();
-
-            expect(result).toEqual({ indexed: 0, errors: 0 });
-        });
-    });
+  });
 });

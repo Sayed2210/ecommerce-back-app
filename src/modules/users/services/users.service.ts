@@ -1,51 +1,51 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { UserRepository } from '../repositories/user.repository';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly userRepository: UserRepository) { }
+  constructor(private readonly userRepository: UserRepository) {}
 
-    async findAll(pagination: PaginationDto) {
-        const { page = 1, limit = 10 } = pagination;
-        return this.userRepository.findWithPagination(page, limit);
+  async findAll(pagination: PaginationDto) {
+    const { page = 1, limit = 10 } = pagination;
+    return this.userRepository.findWithPagination(page, limit);
+  }
+
+  async findOne(id: string) {
+    const user = await this.userRepository.findOneOrFail({ id });
+    return this.sanitizeUser(user);
+  }
+
+  async update(id: string, dto: UpdateProfileDto) {
+    const user = await this.userRepository.findOneOrFail({ id });
+
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.userRepository.findByEmail(dto.email);
+      if (existing) {
+        throw new ConflictException('Email already in use');
+      }
     }
 
-    async findOne(id: string) {
-        const user = await this.userRepository.findOneOrFail({ id });
-        return this.sanitizeUser(user);
-    }
+    const updated = await this.userRepository.update(id, dto);
+    return this.sanitizeUser(updated);
+  }
 
-    async update(id: string, dto: UpdateProfileDto) {
-        const user = await this.userRepository.findOneOrFail({ id });
+  async remove(id: string) {
+    await this.userRepository.update(id, { isActive: false });
+  }
 
-        if (dto.email && dto.email !== user.email) {
-            const existing = await this.userRepository.findByEmail(dto.email);
-            if (existing) {
-                throw new ConflictException('Email already in use');
-            }
-        }
+  async getWishlist(userId: string) {
+    const user = await this.userRepository.findOneWithOptions({
+      where: { id: userId },
+      relations: ['wishlist', 'wishlist.product'],
+    });
+    return user?.wishlist || [];
+  }
 
-        const updated = await this.userRepository.update(id, dto);
-        return this.sanitizeUser(updated);
-    }
-
-    async remove(id: string) {
-        await this.userRepository.update(id, { isActive: false });
-    }
-
-    async getWishlist(userId: string) {
-        const user = await this.userRepository.findOneWithOptions({
-            where: { id: userId },
-            relations: ['wishlist', 'wishlist.product'],
-        });
-        return user?.wishlist || [];
-    }
-
-    private sanitizeUser(user: any) {
-        // Remove sensitive data
-        const { passwordHash, refreshTokens, ...result } = user;
-        return result;
-    }
+  private sanitizeUser(user: any) {
+    // Remove sensitive data
+    const { passwordHash: _ph, refreshTokens: _rt, ...result } = user;
+    return result;
+  }
 }

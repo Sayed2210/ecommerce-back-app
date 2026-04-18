@@ -8,12 +8,13 @@ import { NotificationRepository } from './repositories/notification.repository';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Notification]),
-        AuthModule,
-    ],
-    controllers: [NotificationsController],
-    providers: [NotificationService, NotificationsGateway, NotificationRepository],
-    exports: [NotificationService, NotificationsGateway],
+  imports: [TypeOrmModule.forFeature([Notification]), AuthModule],
+  controllers: [NotificationsController],
+  providers: [
+    NotificationService,
+    NotificationsGateway,
+    NotificationRepository,
+  ],
+  exports: [NotificationService, NotificationsGateway],
 })
-export class NotificationsModule { }
+export class NotificationsModule {}

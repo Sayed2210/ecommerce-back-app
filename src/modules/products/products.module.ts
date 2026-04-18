@@ -27,25 +27,45 @@ import { MailerService } from '@infrastructure/email/mailer.service';
 import { SearchModule } from '../search/search.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Product, ProductImage, Category, ProductVariant, Tag, InventoryLog, Brand]),
-        SearchModule,
-    ],
-    controllers: [ProductsController, TagsController, CategoriesController, BrandsController, ProductImagesController],
-    providers: [
-        ProductsService,
-        TagsService,
-        InventoryService,
-        CategoriesService,
-        BrandsService,
-        ProductImagesService,
-        InventoryAlertWorker,
-        MailerService,
-        ProductRepository,
-        CategoryRepository,
-        ProductVariantRepository,
-        BrandRepository,
-    ],
-    exports: [ProductRepository, CategoryRepository, ProductVariantRepository, TagsService, BrandsService],
+  imports: [
+    TypeOrmModule.forFeature([
+      Product,
+      ProductImage,
+      Category,
+      ProductVariant,
+      Tag,
+      InventoryLog,
+      Brand,
+    ]),
+    SearchModule,
+  ],
+  controllers: [
+    ProductsController,
+    TagsController,
+    CategoriesController,
+    BrandsController,
+    ProductImagesController,
+  ],
+  providers: [
+    ProductsService,
+    TagsService,
+    InventoryService,
+    CategoriesService,
+    BrandsService,
+    ProductImagesService,
+    InventoryAlertWorker,
+    MailerService,
+    ProductRepository,
+    CategoryRepository,
+    ProductVariantRepository,
+    BrandRepository,
+  ],
+  exports: [
+    ProductRepository,
+    CategoryRepository,
+    ProductVariantRepository,
+    TagsService,
+    BrandsService,
+  ],
 })
 export class ProductsModule {}

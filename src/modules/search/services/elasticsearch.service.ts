@@ -6,207 +6,229 @@ import { Product } from '@modules/products/entities/product.entity';
 const PRODUCTS_INDEX = 'products';
 
 interface SearchFilters {
-    category?: string;
-    brands?: string[];
-    minPrice?: number;
-    maxPrice?: number;
-    inStock?: boolean;
-    sortBy?: string;
-    page: number;
-    limit: number;
+  category?: string;
+  brands?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  sortBy?: string;
+  page: number;
+  limit: number;
 }
 
 @Injectable()
 export class ElasticsearchService implements OnModuleInit {
-    private readonly logger = new Logger(ElasticsearchService.name);
-    private readonly client: Client;
+  private readonly logger = new Logger(ElasticsearchService.name);
+  private readonly client: Client;
 
-    constructor(private configService: ConfigService) {
-        const node = configService.get('ELASTICSEARCH_NODE') || 'http://localhost:9200';
-        const apiKey = configService.get('ELASTICSEARCH_API_KEY');
+  constructor(private configService: ConfigService) {
+    const node =
+      configService.get('ELASTICSEARCH_NODE') || 'http://localhost:9200';
+    const apiKey = configService.get('ELASTICSEARCH_API_KEY');
 
-        this.client = new Client({
-            node,
-            ...(apiKey && { auth: { apiKey } }),
+    this.client = new Client({
+      node,
+      ...(apiKey && { auth: { apiKey } }),
+    });
+  }
+
+  async onModuleInit() {
+    await this.ensureIndex();
+  }
+
+  // ── Index management ───────────────────────────────────────────────────────
+
+  async ensureIndex(): Promise<void> {
+    try {
+      const exists = await this.client.indices.exists({
+        index: PRODUCTS_INDEX,
+      });
+      if (!exists) {
+        await this.client.indices.create({
+          index: PRODUCTS_INDEX,
+          body: {
+            mappings: {
+              properties: {
+                name: { type: 'object' },
+                description: { type: 'object' },
+                shortDescription: { type: 'object' },
+                category: { type: 'keyword' },
+                brand: { type: 'keyword' },
+                price: { type: 'float' },
+                isActive: { type: 'boolean' },
+                stock: { type: 'integer' },
+                seoKeywords: { type: 'object' },
+                createdAt: { type: 'date' },
+                metadata: { type: 'object', dynamic: true },
+              },
+            },
+          },
         });
+        this.logger.log(`Created Elasticsearch index: ${PRODUCTS_INDEX}`);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Could not ensure Elasticsearch index: ${error.message}`,
+      );
+    }
+  }
+
+  // ── Write operations ───────────────────────────────────────────────────────
+
+  async indexProduct(product: Product): Promise<void> {
+    await this.client.index({
+      index: PRODUCTS_INDEX,
+      id: product.id,
+      body: {
+        name: product.name,
+        description: product.description,
+        shortDescription: product.shortDescription,
+        category: product.category?.name ?? null,
+        brand: product.brand?.name ?? null,
+        price: product.basePrice,
+        isActive: product.isActive,
+        stock: product.inventoryQuantity,
+        seoKeywords: product.seoKeywords,
+        createdAt: product.createdAt,
+        metadata: product.metadata,
+      },
+    });
+  }
+
+  async deleteProduct(productId: string): Promise<void> {
+    try {
+      await this.client.delete({ index: PRODUCTS_INDEX, id: productId });
+    } catch (error) {
+      // 404 means it was never indexed — not an error worth surfacing
+      if (error?.meta?.statusCode !== 404) throw error;
+    }
+  }
+
+  async bulkIndex(
+    products: Product[],
+  ): Promise<{ indexed: number; errors: number }> {
+    if (products.length === 0) return { indexed: 0, errors: 0 };
+
+    const operations = products.flatMap((product) => [
+      { index: { _index: PRODUCTS_INDEX, _id: product.id } },
+      {
+        name: product.name,
+        description: product.description,
+        shortDescription: product.shortDescription,
+        category: product.category?.name ?? null,
+        brand: product.brand?.name ?? null,
+        price: product.basePrice,
+        isActive: product.isActive,
+        stock: product.inventoryQuantity,
+        seoKeywords: product.seoKeywords,
+        createdAt: product.createdAt,
+        metadata: product.metadata,
+      },
+    ]);
+
+    const response = await this.client.bulk({
+      body: operations,
+      refresh: true,
+    });
+
+    const errors = response.errors
+      ? (response.items as any[]).filter((i) => i.index?.error).length
+      : 0;
+
+    this.logger.log(
+      `Bulk indexed ${products.length - errors} products, ${errors} errors`,
+    );
+    return { indexed: products.length - errors, errors };
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+
+  async search(query: string, filters: SearchFilters) {
+    const mustQueries: any[] = [];
+
+    if (query) {
+      mustQueries.push({
+        multi_match: {
+          query,
+          fields: [
+            'name^3',
+            'shortDescription^2',
+            'description',
+            'seoKeywords',
+          ],
+          type: 'best_fields',
+          fuzziness: 'AUTO',
+        },
+      });
     }
 
-    async onModuleInit() {
-        await this.ensureIndex();
+    if (filters.category) {
+      mustQueries.push({ term: { category: filters.category } });
     }
 
-    // ── Index management ───────────────────────────────────────────────────────
-
-    async ensureIndex(): Promise<void> {
-        try {
-            const exists = await this.client.indices.exists({ index: PRODUCTS_INDEX });
-            if (!exists) {
-                await this.client.indices.create({
-                    index: PRODUCTS_INDEX,
-                    body: {
-                        mappings: {
-                            properties: {
-                                name:             { type: 'object' },
-                                description:      { type: 'object' },
-                                shortDescription: { type: 'object' },
-                                category:         { type: 'keyword' },
-                                brand:            { type: 'keyword' },
-                                price:            { type: 'float' },
-                                isActive:         { type: 'boolean' },
-                                stock:            { type: 'integer' },
-                                seoKeywords:      { type: 'object' },
-                                createdAt:        { type: 'date' },
-                                metadata:         { type: 'object', dynamic: true },
-                            },
-                        },
-                    },
-                });
-                this.logger.log(`Created Elasticsearch index: ${PRODUCTS_INDEX}`);
-            }
-        } catch (error) {
-            this.logger.warn(`Could not ensure Elasticsearch index: ${error.message}`);
-        }
+    if (filters.brands?.length) {
+      mustQueries.push({ terms: { brand: filters.brands } });
     }
 
-    // ── Write operations ───────────────────────────────────────────────────────
-
-    async indexProduct(product: Product): Promise<void> {
-        await this.client.index({
-            index: PRODUCTS_INDEX,
-            id: product.id,
-            body: {
-                name:             product.name,
-                description:      product.description,
-                shortDescription: product.shortDescription,
-                category:         product.category?.name ?? null,
-                brand:            product.brand?.name ?? null,
-                price:            product.basePrice,
-                isActive:         product.isActive,
-                stock:            product.inventoryQuantity,
-                seoKeywords:      product.seoKeywords,
-                createdAt:        product.createdAt,
-                metadata:         product.metadata,
-            },
-        });
+    if (filters.minPrice || filters.maxPrice) {
+      mustQueries.push({
+        range: {
+          price: {
+            gte: filters.minPrice || 0,
+            lte: filters.maxPrice || 999999,
+          },
+        },
+      });
     }
 
-    async deleteProduct(productId: string): Promise<void> {
-        try {
-            await this.client.delete({ index: PRODUCTS_INDEX, id: productId });
-        } catch (error) {
-            // 404 means it was never indexed — not an error worth surfacing
-            if (error?.meta?.statusCode !== 404) throw error;
-        }
+    if (filters.inStock) {
+      mustQueries.push({ range: { stock: { gt: 0 } } });
     }
 
-    async bulkIndex(products: Product[]): Promise<{ indexed: number; errors: number }> {
-        if (products.length === 0) return { indexed: 0, errors: 0 };
+    const result = await this.client.search({
+      index: PRODUCTS_INDEX,
+      from: (filters.page - 1) * filters.limit,
+      size: filters.limit,
+      body: {
+        query: {
+          bool: {
+            must: mustQueries,
+            filter: [{ term: { isActive: true } }],
+          },
+        },
+        sort: this.getSortClause(filters.sortBy),
+      },
+    } as any);
 
-        const operations = products.flatMap((product) => [
-            { index: { _index: PRODUCTS_INDEX, _id: product.id } },
-            {
-                name:             product.name,
-                description:      product.description,
-                shortDescription: product.shortDescription,
-                category:         product.category?.name ?? null,
-                brand:            product.brand?.name ?? null,
-                price:            product.basePrice,
-                isActive:         product.isActive,
-                stock:            product.inventoryQuantity,
-                seoKeywords:      product.seoKeywords,
-                createdAt:        product.createdAt,
-                metadata:         product.metadata,
-            },
-        ]);
+    const total =
+      typeof result.hits.total === 'number'
+        ? result.hits.total
+        : (result.hits.total?.value ?? 0);
 
-        const response = await this.client.bulk({ body: operations, refresh: true });
+    return {
+      products: result.hits.hits.map((hit) => hit._source),
+      total,
+    };
+  }
 
-        const errors = response.errors
-            ? (response.items as any[]).filter((i) => i.index?.error).length
-            : 0;
+  async ping(): Promise<void> {
+    await this.client.ping();
+  }
 
-        this.logger.log(`Bulk indexed ${products.length - errors} products, ${errors} errors`);
-        return { indexed: products.length - errors, errors };
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  private getSortClause(sortBy?: string) {
+    switch (sortBy) {
+      case 'price-low':
+        return [{ price: { order: 'asc' as const } }];
+      case 'price-high':
+        return [{ price: { order: 'desc' as const } }];
+      case 'newest':
+        return [{ createdAt: { order: 'desc' as const } }];
+      case 'rating':
+        return [{ 'metadata.avgRating': { order: 'desc' as const } }];
+      default:
+        return [{ _score: { order: 'desc' as const } }];
     }
-
-    // ── Search ─────────────────────────────────────────────────────────────────
-
-    async search(query: string, filters: SearchFilters) {
-        const mustQueries: any[] = [];
-
-        if (query) {
-            mustQueries.push({
-                multi_match: {
-                    query,
-                    fields: ['name^3', 'shortDescription^2', 'description', 'seoKeywords'],
-                    type: 'best_fields',
-                    fuzziness: 'AUTO',
-                },
-            });
-        }
-
-        if (filters.category) {
-            mustQueries.push({ term: { category: filters.category } });
-        }
-
-        if (filters.brands?.length) {
-            mustQueries.push({ terms: { brand: filters.brands } });
-        }
-
-        if (filters.minPrice || filters.maxPrice) {
-            mustQueries.push({
-                range: {
-                    price: {
-                        gte: filters.minPrice || 0,
-                        lte: filters.maxPrice || 999999,
-                    },
-                },
-            });
-        }
-
-        if (filters.inStock) {
-            mustQueries.push({ range: { stock: { gt: 0 } } });
-        }
-
-        const result = await this.client.search({
-            index: PRODUCTS_INDEX,
-            from: (filters.page - 1) * filters.limit,
-            size: filters.limit,
-            body: {
-                query: {
-                    bool: {
-                        must: mustQueries,
-                        filter: [{ term: { isActive: true } }],
-                    },
-                },
-                sort: this.getSortClause(filters.sortBy),
-            },
-        } as any);
-
-        const total =
-            typeof result.hits.total === 'number'
-                ? result.hits.total
-                : result.hits.total?.value ?? 0;
-
-        return {
-            products: result.hits.hits.map((hit) => hit._source),
-            total,
-        };
-    }
-
-    async ping(): Promise<void> {
-        await this.client.ping();
-    }
-
-    // ── Private helpers ────────────────────────────────────────────────────────
-
-    private getSortClause(sortBy?: string) {
-        switch (sortBy) {
-            case 'price-low':  return [{ price: { order: 'asc' as const } }];
-            case 'price-high': return [{ price: { order: 'desc' as const } }];
-            case 'newest':     return [{ createdAt: { order: 'desc' as const } }];
-            case 'rating':     return [{ 'metadata.avgRating': { order: 'desc' as const } }];
-            default:           return [{ _score: { order: 'desc' as const } }];
-        }
-    }
+  }
 }

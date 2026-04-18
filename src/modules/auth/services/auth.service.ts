@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserRepository } from '../repositories/user.repository';
@@ -14,140 +19,151 @@ import { ChangePasswordDto } from '../dtos/change-password.dto';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private readonly userRepository: UserRepository,
-        private readonly jwtService: JwtService,
-        private readonly passwordService: PasswordService,
-        private readonly tokenService: TokenService,
-        private readonly configService: ConfigService,
-        private readonly mailerService: MailerService,
-    ) { }
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly jwtService: JwtService,
+    private readonly passwordService: PasswordService,
+    private readonly tokenService: TokenService,
+    private readonly configService: ConfigService,
+    private readonly mailerService: MailerService,
+  ) {}
 
-    async register(dto: RegisterDto) {
-        const existingUser = await this.userRepository.findByEmail(dto.email);
-        if (existingUser) {
-            throw new ConflictException('Email already exists');
-        }
-
-        const hashedPassword = await this.passwordService.hash(dto.password);
-        const user = await this.userRepository.create({
-            ...dto,
-            passwordHash: hashedPassword,
-        });
-
-        const tokens = await this.tokenService.generateTokens(user.id);
-        await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
-
-        return {
-            user: this.sanitizeUser(user),
-            tokens,
-        };
+  async register(dto: RegisterDto) {
+    const existingUser = await this.userRepository.findByEmail(dto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
     }
 
-    async login(dto: LoginDto) {
-        const user = await this.userRepository.findByEmail(dto.email);
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
+    const hashedPassword = await this.passwordService.hash(dto.password);
+    const user = await this.userRepository.create({
+      ...dto,
+      passwordHash: hashedPassword,
+    });
 
-        const isPasswordValid = await this.passwordService.verify(dto.password, user.passwordHash);
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
+    const tokens = await this.tokenService.generateTokens(user.id);
+    await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
 
-        const tokens = await this.tokenService.generateTokens(user.id);
-        await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
+    return {
+      user: this.sanitizeUser(user),
+      tokens,
+    };
+  }
 
-        return {
-            user: this.sanitizeUser(user),
-            tokens,
-        };
+  async login(dto: LoginDto) {
+    const user = await this.userRepository.findByEmail(dto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    async refreshTokens(dto: RefreshTokenDto) {
-        const payload = await this.tokenService.verifyRefreshToken(dto.refreshToken);
-        const user = await this.userRepository.findOneOrFail({ id: payload.sub });
-
-        const newTokens = await this.tokenService.generateTokens(user.id);
-        await this.tokenService.revokeRefreshToken(dto.refreshToken);
-        await this.tokenService.saveRefreshToken(user.id, newTokens.refreshToken);
-
-        return newTokens;
+    const isPasswordValid = await this.passwordService.verify(
+      dto.password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    async forgotPassword(dto: ForgotPasswordDto) {
-        const user = await this.userRepository.findByEmail(dto.email);
-        if (!user) {
-            return { message: 'If an account exists, we will send a reset link' };
-        }
+    const tokens = await this.tokenService.generateTokens(user.id);
+    await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
 
-        const resetToken = await this.tokenService.generateResetToken(user.id);
-        const appUrl = this.configService.get('APP_URL') || 'http://localhost:3000';
-        const resetUrl = `${appUrl}/auth/reset-password?token=${resetToken}`;
+    return {
+      user: this.sanitizeUser(user),
+      tokens,
+    };
+  }
 
-        try {
-            await this.mailerService.sendPasswordReset(user.email, {
-                name: user.firstName,
-                resetUrl,
-                expiresIn: '1 hour',
-            });
-        } catch (error) {
-            console.error('Failed to send password reset email:', error);
-        }
+  async refreshTokens(dto: RefreshTokenDto) {
+    const payload = await this.tokenService.verifyRefreshToken(
+      dto.refreshToken,
+    );
+    const user = await this.userRepository.findOneOrFail({ id: payload.sub });
 
-        return { message: 'Password reset email sent' };
+    const newTokens = await this.tokenService.generateTokens(user.id);
+    await this.tokenService.revokeRefreshToken(dto.refreshToken);
+    await this.tokenService.saveRefreshToken(user.id, newTokens.refreshToken);
+
+    return newTokens;
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.userRepository.findByEmail(dto.email);
+    if (!user) {
+      return { message: 'If an account exists, we will send a reset link' };
     }
 
-    async resetPassword(dto: ResetPasswordDto) {
-        const payload = await this.tokenService.verifyResetToken(dto.token);
-        const hashedPassword = await this.passwordService.hash(dto.newPassword);
+    const resetToken = await this.tokenService.generateResetToken(user.id);
+    const appUrl = this.configService.get('APP_URL') || 'http://localhost:3000';
+    const resetUrl = `${appUrl}/auth/reset-password?token=${resetToken}`;
 
-        await this.userRepository.update(payload.sub, { passwordHash: hashedPassword });
-        await this.tokenService.revokeResetToken(dto.token);
-
-        return { message: 'Password reset successful' };
+    try {
+      await this.mailerService.sendPasswordReset(user.email, {
+        name: user.firstName,
+        resetUrl,
+        expiresIn: '1 hour',
+      });
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
     }
 
-    async verifyEmail(token: string) {
-        const payload = await this.tokenService.verifyVerificationToken(token);
-        const user = await this.userRepository.findOneOrFail({ id: payload.sub });
+    return { message: 'Password reset email sent' };
+  }
 
-        if (user.isEmailVerified) {
-            return { message: 'Email already verified' };
-        }
+  async resetPassword(dto: ResetPasswordDto) {
+    const payload = await this.tokenService.verifyResetToken(dto.token);
+    const hashedPassword = await this.passwordService.hash(dto.newPassword);
 
-        await this.userRepository.update(user.id, { isEmailVerified: true });
-        return { message: 'Email verified successfully' };
+    await this.userRepository.update(payload.sub, {
+      passwordHash: hashedPassword,
+    });
+    await this.tokenService.revokeResetToken(dto.token);
+
+    return { message: 'Password reset successful' };
+  }
+
+  async verifyEmail(token: string) {
+    const payload = await this.tokenService.verifyVerificationToken(token);
+    const user = await this.userRepository.findOneOrFail({ id: payload.sub });
+
+    if (user.isEmailVerified) {
+      return { message: 'Email already verified' };
     }
 
-    async changePassword(userId: string, dto: ChangePasswordDto) {
-        const user = await this.userRepository.findOneOrFail({ id: userId });
+    await this.userRepository.update(user.id, { isEmailVerified: true });
+    return { message: 'Email verified successfully' };
+  }
 
-        const isCurrentPasswordValid = await this.passwordService.verify(dto.currentPassword, user.passwordHash);
-        if (!isCurrentPasswordValid) {
-            throw new UnauthorizedException('Current password is incorrect');
-        }
-        if (dto.currentPassword === dto.newPassword) {
-            throw new BadRequestException('New password must be different from current password');
-        }
-        if (dto.newPassword !== dto.confirmPassword) {
-            throw new BadRequestException('Passwords do not match');
-        }
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.userRepository.findOneOrFail({ id: userId });
 
-
-        const hashedPassword = await this.passwordService.hash(dto.newPassword);
-        await this.userRepository.update(userId, { passwordHash: hashedPassword });
-
-        return { message: 'Password changed successfully' };
+    const isCurrentPasswordValid = await this.passwordService.verify(
+      dto.currentPassword,
+      user.passwordHash,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
     }
 
-    async logout(refreshToken: string) {
-        await this.tokenService.revokeRefreshToken(refreshToken);
-        return { message: 'Logged out successfully' };
-    }
+    const hashedPassword = await this.passwordService.hash(dto.newPassword);
+    await this.userRepository.update(userId, { passwordHash: hashedPassword });
 
-    private sanitizeUser(user: any) {
-        const { passwordHash, ...result } = user;
-        return result;
-    }
+    return { message: 'Password changed successfully' };
+  }
+
+  async logout(refreshToken: string) {
+    await this.tokenService.revokeRefreshToken(refreshToken);
+    return { message: 'Logged out successfully' };
+  }
+
+  private sanitizeUser(user: any) {
+    const { passwordHash: _, ...result } = user;
+    return result;
+  }
 }

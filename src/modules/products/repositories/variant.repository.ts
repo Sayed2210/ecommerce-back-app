@@ -6,11 +6,10 @@ import { Repository } from 'typeorm';
 
 @Injectable()
 export class ProductVariantRepository extends AbstractRepository<ProductVariant> {
-    constructor(
-        @InjectRepository(ProductVariant)
-        private readonly variantRepository: Repository<ProductVariant>,
-    ) {
-        super(variantRepository);
-    }
-
+  constructor(
+    @InjectRepository(ProductVariant)
+    private readonly variantRepository: Repository<ProductVariant>,
+  ) {
+    super(variantRepository);
+  }
 }

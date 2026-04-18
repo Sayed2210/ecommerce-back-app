@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { SearchService } from '../services/search.service';
 import { SearchDto } from '../dtos/search.dto';
@@ -11,28 +24,36 @@ import { UserRole } from '@modules/auth/entities/user.entity';
 @ApiTags('Search')
 @Controller('search')
 export class SearchController {
-    constructor(private readonly searchService: SearchService) { }
+  constructor(private readonly searchService: SearchService) {}
 
-    @Get()
-    @UseGuards(ThrottlerGuard)
-    @Throttle({ default: { ttl: 60000, limit: 30 } })
-    @ApiOperation({ summary: 'Search products', description: 'Search products by query, category, price, etc.' })
-    @ApiResponse({ status: 200, description: 'Search results retrieved' })
-    search(@Query() searchDto: SearchDto) {
-        return this.searchService.search(searchDto);
-    }
+  @Get()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @ApiOperation({
+    summary: 'Search products',
+    description: 'Search products by query, category, price, etc.',
+  })
+  @ApiResponse({ status: 200, description: 'Search results retrieved' })
+  search(@Query() searchDto: SearchDto) {
+    return this.searchService.search(searchDto);
+  }
 
-    @Post('reindex')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN)
-    @ApiBearerAuth()
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({
-        summary: 'Reindex all products',
-        description: 'Bulk re-index all products into Elasticsearch. Admin only. Use after data migrations or when search results are stale.',
-    })
-    @ApiResponse({ status: 200, description: 'Reindex complete', schema: { example: { indexed: 250, errors: 0 } } })
-    reindex() {
-        return this.searchService.reindexAll();
-    }
+  @Post('reindex')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reindex all products',
+    description:
+      'Bulk re-index all products into Elasticsearch. Admin only. Use after data migrations or when search results are stale.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reindex complete',
+    schema: { example: { indexed: 250, errors: 0 } },
+  })
+  reindex() {
+    return this.searchService.reindexAll();
+  }
 }

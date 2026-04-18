@@ -5,13 +5,15 @@ import { Review } from './review.entity';
 
 @Entity('review_images')
 export class ReviewImage extends BaseEntity {
-    @Column()
-    url: string;
+  @Column()
+  url: string;
 
-    @Column({ nullable: true })
-    altText?: string;
+  @Column({ nullable: true })
+  altText?: string;
 
-    @ManyToOne(() => Review, review => review.reviewImages, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'review_id' })
-    review: Review;
+  @ManyToOne(() => Review, (review) => review.reviewImages, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'review_id' })
+  review: Review;
 }

@@ -11,14 +11,16 @@ async function bootstrap() {
 
   app.use(helmet());
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: false,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: false,
+    }),
+  );
 
   const isProduction = process.env.NODE_ENV === 'production';
-  const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean) as string[];
+  const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean);
   if (!isProduction) {
     allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
   }
@@ -32,7 +34,8 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('E-commerce Backend API')
-    .setDescription(`
+    .setDescription(
+      `
 # E-Commerce Backend API
 
 Complete REST API documentation for the e-commerce platform.
@@ -69,7 +72,8 @@ Send \`Accept-Language\` header to get locale-specific responses.
 - \`customer\` — Default role (can manage own cart, orders, reviews)
 - \`staff\` — Internal team members
 - \`admin\` — Full access (manage products, orders, users)
-    `.trim())
+    `.trim(),
+    )
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -105,4 +109,4 @@ Send \`Accept-Language\` header to get locale-specific responses.
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

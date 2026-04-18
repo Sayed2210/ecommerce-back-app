@@ -6,12 +6,12 @@ import { Wishlist } from '../entities/wishlist.entity';
 
 @Injectable()
 export class WishlistRepository extends AbstractRepository<Wishlist> {
-    constructor(
-        @InjectRepository(Wishlist)
-        private readonly wishlistRepository: Repository<Wishlist>,
-    ) {
-        super(wishlistRepository);
-    }
+  constructor(
+    @InjectRepository(Wishlist)
+    private readonly wishlistRepository: Repository<Wishlist>,
+  ) {
+    super(wishlistRepository);
+  }
 
-    // Custom methods specific to Wishlist can be added here
+  // Custom methods specific to Wishlist can be added here
 }

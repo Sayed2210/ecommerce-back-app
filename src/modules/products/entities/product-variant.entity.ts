@@ -9,49 +9,57 @@ import { InventoryLog } from './inventory-log.entity';
 
 @Entity('product_variants')
 export class ProductVariant extends BaseEntity {
-    @Column({ name: 'variant_name', type: 'jsonb' })
-    variantName: Record<string, any>;
+  @Column({ name: 'variant_name', type: 'jsonb' })
+  variantName: Record<string, any>;
 
-    @Column({ name: 'price_modifier', type: 'decimal', precision: 12, scale: 2, default: 0 })
-    priceModifier: number;
+  @Column({
+    name: 'price_modifier',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  priceModifier: number;
 
-    @Column({ nullable: true, length: 100 })
-    sku?: string;
+  @Column({ nullable: true, length: 100 })
+  sku?: string;
 
-    @Column({ nullable: true, length: 100 })
-    barcode?: string;
+  @Column({ nullable: true, length: 100 })
+  barcode?: string;
 
-    @Column({ name: 'inventory_quantity', default: 0 })
-    inventoryQuantity: number;
+  @Column({ name: 'inventory_quantity', default: 0 })
+  inventoryQuantity: number;
 
-    @Column({ name: 'reserved_quantity', default: 0 })
-    reservedQuantity: number;
+  @Column({ name: 'reserved_quantity', default: 0 })
+  reservedQuantity: number;
 
-    @Column({ name: 'low_stock_threshold', default: 5 })
-    lowStockThreshold: number;
+  @Column({ name: 'low_stock_threshold', default: 5 })
+  lowStockThreshold: number;
 
-    @Column({ type: 'jsonb', default: {} })
-    optionValues: Record<string, any>;
+  @Column({ type: 'jsonb', default: {} })
+  optionValues: Record<string, any>;
 
-    @Column({ name: 'image_url', nullable: true })
-    imageUrl?: string;
+  @Column({ name: 'image_url', nullable: true })
+  imageUrl?: string;
 
-    @Column({ name: 'is_active', default: true })
-    isActive: boolean;
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
-    @ManyToOne(() => Product, product => product.variants, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'product_id' })
-    product: Product;
+  @ManyToOne(() => Product, (product) => product.variants, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'product_id' })
+  product: Product;
 
-    @OneToMany(() => ProductImage, image => image.variant)
-    images: ProductImage[];
+  @OneToMany(() => ProductImage, (image) => image.variant)
+  images: ProductImage[];
 
-    @OneToMany(() => CartItem, item => item.variant)
-    cartItems: CartItem[];
+  @OneToMany(() => CartItem, (item) => item.variant)
+  cartItems: CartItem[];
 
-    @OneToMany(() => OrderItem, item => item.variant)
-    orderItems: OrderItem[];
+  @OneToMany(() => OrderItem, (item) => item.variant)
+  orderItems: OrderItem[];
 
-    @OneToMany(() => InventoryLog, log => log.product)
-    inventoryLogs: InventoryLog[];
+  @OneToMany(() => InventoryLog, (log) => log.product)
+  inventoryLogs: InventoryLog[];
 }

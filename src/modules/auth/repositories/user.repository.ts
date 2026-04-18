@@ -6,19 +6,19 @@ import { User } from '../entities/user.entity';
 
 @Injectable()
 export class UserRepository extends AbstractRepository<User> {
-    constructor(
-        @InjectRepository(User)
-        private readonly userRepository: Repository<User>,
-    ) {
-        super(userRepository);
-    }
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {
+    super(userRepository);
+  }
 
-    // Custom methods specific to User
-    async findByEmail(email: string): Promise<User | null> {
-        return this.findOne({ email } as any);
-    }
+  // Custom methods specific to User
+  async findByEmail(email: string): Promise<User | null> {
+    return this.findOne({ email } as any);
+  }
 
-    async findByUsername(username: string): Promise<User | null> {
-        return this.findOne({ username } as any);
-    }
+  async findByUsername(username: string): Promise<User | null> {
+    return this.findOne({ username } as any);
+  }
 }

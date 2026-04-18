@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../entities/order.entity';
@@ -15,9 +20,12 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
-  ) { }
+  ) {}
 
-  async findAll(filters: { status?: OrderStatus; userId?: string }, pagination: PaginationDto) {
+  async findAll(
+    filters: { status?: OrderStatus; userId?: string },
+    pagination: PaginationDto,
+  ) {
     const { page = 1, limit = 20 } = pagination;
     const where: any = {};
 
@@ -76,7 +84,10 @@ export class OrdersService {
       [OrderStatus.REFUNDED]: [],
     };
 
-    if (validTransitions[order.status] && !validTransitions[order.status].includes(status)) {
+    if (
+      validTransitions[order.status] &&
+      !validTransitions[order.status].includes(status)
+    ) {
       // Allow if admin force, but logic here seems to enforce flow.
       // Relaxing mismatch logic or keeping as is.
       // Keeping check but ensuring types match.
@@ -100,17 +111,17 @@ export class OrdersService {
       where.user = { id: userId };
     }
 
-    const [
-      totalOrders,
-      totalRevenue,
-      pendingOrders,
-      deliveredOrders,
-    ] = await Promise.all([
-      this.orderRepository.count({ where }),
-      this.orderRepository.sum('totalAmount', where),
-      this.orderRepository.count({ where: { ...where, status: OrderStatus.PENDING } }),
-      this.orderRepository.count({ where: { ...where, status: OrderStatus.DELIVERED } }),
-    ]);
+    const [totalOrders, totalRevenue, pendingOrders, deliveredOrders] =
+      await Promise.all([
+        this.orderRepository.count({ where }),
+        this.orderRepository.sum('totalAmount', where),
+        this.orderRepository.count({
+          where: { ...where, status: OrderStatus.PENDING },
+        }),
+        this.orderRepository.count({
+          where: { ...where, status: OrderStatus.DELIVERED },
+        }),
+      ]);
 
     return {
       totalOrders,

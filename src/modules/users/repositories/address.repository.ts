@@ -6,12 +6,12 @@ import { Address } from '../entities/address.entity';
 
 @Injectable()
 export class AddressRepository extends AbstractRepository<Address> {
-    constructor(
-        @InjectRepository(Address)
-        private readonly addressRepository: Repository<Address>,
-    ) {
-        super(addressRepository);
-    }
+  constructor(
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
+  ) {
+    super(addressRepository);
+  }
 
-    // Custom methods specific to Address can be added here
+  // Custom methods specific to Address can be added here
 }

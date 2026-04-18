@@ -13,13 +13,13 @@ import { ProductsModule } from '../products/products.module';
 // import { OAuthProvider } from './entities/oauth-provider.entity'; // Assuming it exists
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([User, Address, Wishlist]),
-        ProductsModule,
-        PassportModule, // Changed from .register to avoid potential isolation issues
-    ],
-    controllers: [UsersController, WishlistController],
-    providers: [UsersService, UserRepository, WishlistService],
-    exports: [UsersService, UserRepository, TypeOrmModule], // Export TypeOrmModule to allow access to Address entity
+  imports: [
+    TypeOrmModule.forFeature([User, Address, Wishlist]),
+    ProductsModule,
+    PassportModule, // Changed from .register to avoid potential isolation issues
+  ],
+  controllers: [UsersController, WishlistController],
+  providers: [UsersService, UserRepository, WishlistService],
+  exports: [UsersService, UserRepository, TypeOrmModule], // Export TypeOrmModule to allow access to Address entity
 })
-export class UsersModule { }
+export class UsersModule {}

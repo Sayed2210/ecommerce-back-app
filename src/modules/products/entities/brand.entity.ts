@@ -5,27 +5,27 @@ import { Product } from './product.entity';
 
 @Entity('brands')
 export class Brand extends BaseEntity {
-    @Column({ unique: true })
-    slug: string;
+  @Column({ unique: true })
+  slug: string;
 
-    @Column({ type: 'jsonb', unique: true })
-    name: Record<string, any>;
+  @Column({ type: 'jsonb', unique: true })
+  name: Record<string, any>;
 
-    @Column({ type: 'jsonb', nullable: true })
-    description?: Record<string, any>;
+  @Column({ type: 'jsonb', nullable: true })
+  description?: Record<string, any>;
 
-    @Column({ name: 'logo_url', nullable: true })
-    logoUrl?: string;
+  @Column({ name: 'logo_url', nullable: true })
+  logoUrl?: string;
 
-    @Column({ name: 'website_url', nullable: true })
-    websiteUrl?: string;
+  @Column({ name: 'website_url', nullable: true })
+  websiteUrl?: string;
 
-    @Column({ name: 'is_active', default: true })
-    isActive: boolean;
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
-    @DeleteDateColumn({ name: 'deleted_at', nullable: true })
-    deletedAt?: Date;
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt?: Date;
 
-    @OneToMany(() => Product, product => product.brand)
-    products: Product[];
+  @OneToMany(() => Product, (product) => product.brand)
+  products: Product[];
 }
