@@ -4,6 +4,7 @@ import { CheckoutService } from '../services/checkout.service';
 import { PaymentService } from '../services/payment.service';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { PaymentGateway } from '../entities';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('CheckoutController', () => {
   let controller: CheckoutController;
@@ -26,7 +27,10 @@ describe('CheckoutController', () => {
           useValue: { createPaymentIntent: jest.fn() },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
 
     controller = module.get<CheckoutController>(CheckoutController);
     service = module.get<CheckoutService>(CheckoutService);
