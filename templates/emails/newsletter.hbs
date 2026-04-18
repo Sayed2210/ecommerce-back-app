@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>{{subject}}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f9f9f9; margin: 0; padding: 0;">
+  <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 32px;">
+
+    {{#if name}}<p>Hi {{name}},</p>{{/if}}
+
+    <div style="margin: 16px 0;">
+      {{{content}}}
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0 16px;" />
+    <p style="font-size: 12px; color: #999; margin: 0;">
+      You are receiving this email because you subscribed to {{appName}} newsletters.<br>
+      <a href="{{unsubscribeUrl}}" style="color: #999;">Unsubscribe</a> &nbsp;|&nbsp;
+      Questions? <a href="mailto:{{supportEmail}}" style="color: #999;">{{supportEmail}}</a><br>
+      © {{year}} {{appName}}
+    </p>
+  </div>
+</body>
+</html>

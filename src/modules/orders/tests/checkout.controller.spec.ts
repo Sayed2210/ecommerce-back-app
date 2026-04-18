@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CheckoutController } from '../controllers/checkout.controller';
 import { CheckoutService } from '../services/checkout.service';
+import { PaymentService } from '../services/payment.service';
 import { CreateOrderDto } from '../dtos/create-order.dto';
-import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
+import { PaymentGateway } from '../entities';
 
 describe('CheckoutController', () => {
     let controller: CheckoutController;
@@ -19,6 +20,10 @@ describe('CheckoutController', () => {
                         createOrder: jest.fn(),
                         applyCoupon: jest.fn(),
                     },
+                },
+                {
+                    provide: PaymentService,
+                    useValue: { createPaymentIntent: jest.fn() },
                 },
             ],
         }).compile();
@@ -45,7 +50,7 @@ describe('CheckoutController', () => {
             const req = { user: { id: 'user-1' } };
             const orderData: CreateOrderDto = {
                 shippingAddressId: 'addr-1',
-                paymentMethod: 'stripe',
+                paymentMethod: PaymentGateway.STRIPE,
                 paymentToken: 'tok_123'
             };
             await controller.createOrder(req, orderData);
@@ -55,14 +60,10 @@ describe('CheckoutController', () => {
 
     describe('applyCoupon', () => {
         it('should transform code to dto and call service.applyCoupon', async () => {
-            const req = { user: { id: 'user-1' } }; // req is actually unused in the updated controller method for applyCoupon logic, but required by guard/decorator context typically.
             const code = 'SAVE10';
-            await controller.applyCoupon(req, code);
+            await controller.applyCoupon(code);
 
-            const expectedDto = new ApplyCouponDto();
-            expectedDto.code = code;
-
-            expect(service.applyCoupon).toHaveBeenCalledWith(expectedDto);
+            expect(service.applyCoupon).toHaveBeenCalledWith({ code });
         });
     });
 });

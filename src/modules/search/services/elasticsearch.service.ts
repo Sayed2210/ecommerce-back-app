@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
 import { Product } from '@modules/products/entities/product.entity';
+
+const PRODUCTS_INDEX = 'products';
 
 interface SearchFilters {
     category?: string;
@@ -15,7 +17,8 @@ interface SearchFilters {
 }
 
 @Injectable()
-export class ElasticsearchService {
+export class ElasticsearchService implements OnModuleInit {
+    private readonly logger = new Logger(ElasticsearchService.name);
     private readonly client: Client;
 
     constructor(private configService: ConfigService) {
@@ -28,30 +31,109 @@ export class ElasticsearchService {
         });
     }
 
-    async indexProduct(product: Product) {
+    async onModuleInit() {
+        await this.ensureIndex();
+    }
+
+    // ── Index management ───────────────────────────────────────────────────────
+
+    async ensureIndex(): Promise<void> {
+        try {
+            const exists = await this.client.indices.exists({ index: PRODUCTS_INDEX });
+            if (!exists) {
+                await this.client.indices.create({
+                    index: PRODUCTS_INDEX,
+                    body: {
+                        mappings: {
+                            properties: {
+                                name:             { type: 'object' },
+                                description:      { type: 'object' },
+                                shortDescription: { type: 'object' },
+                                category:         { type: 'keyword' },
+                                brand:            { type: 'keyword' },
+                                price:            { type: 'float' },
+                                isActive:         { type: 'boolean' },
+                                stock:            { type: 'integer' },
+                                seoKeywords:      { type: 'object' },
+                                createdAt:        { type: 'date' },
+                                metadata:         { type: 'object', dynamic: true },
+                            },
+                        },
+                    },
+                });
+                this.logger.log(`Created Elasticsearch index: ${PRODUCTS_INDEX}`);
+            }
+        } catch (error) {
+            this.logger.warn(`Could not ensure Elasticsearch index: ${error.message}`);
+        }
+    }
+
+    // ── Write operations ───────────────────────────────────────────────────────
+
+    async indexProduct(product: Product): Promise<void> {
         await this.client.index({
-            index: 'products',
+            index: PRODUCTS_INDEX,
             id: product.id,
             body: {
-                name: product.name,
-                description: product.description,
+                name:             product.name,
+                description:      product.description,
                 shortDescription: product.shortDescription,
-                category: product.category.name,
-                brand: product.brand.name,
-                price: product.basePrice,
-                isActive: product.isActive,
-                stock: product.inventoryQuantity,
-                seoKeywords: product.seoKeywords,
-                createdAt: product.createdAt,
-                metadata: product.metadata,
+                category:         product.category?.name ?? null,
+                brand:            product.brand?.name ?? null,
+                price:            product.basePrice,
+                isActive:         product.isActive,
+                stock:            product.inventoryQuantity,
+                seoKeywords:      product.seoKeywords,
+                createdAt:        product.createdAt,
+                metadata:         product.metadata,
             },
         });
     }
 
-    async search(query: string, filters: SearchFilters) {
-        const mustQueries = [];
+    async deleteProduct(productId: string): Promise<void> {
+        try {
+            await this.client.delete({ index: PRODUCTS_INDEX, id: productId });
+        } catch (error) {
+            // 404 means it was never indexed — not an error worth surfacing
+            if (error?.meta?.statusCode !== 404) throw error;
+        }
+    }
 
-        // Full-text search on name and description
+    async bulkIndex(products: Product[]): Promise<{ indexed: number; errors: number }> {
+        if (products.length === 0) return { indexed: 0, errors: 0 };
+
+        const operations = products.flatMap((product) => [
+            { index: { _index: PRODUCTS_INDEX, _id: product.id } },
+            {
+                name:             product.name,
+                description:      product.description,
+                shortDescription: product.shortDescription,
+                category:         product.category?.name ?? null,
+                brand:            product.brand?.name ?? null,
+                price:            product.basePrice,
+                isActive:         product.isActive,
+                stock:            product.inventoryQuantity,
+                seoKeywords:      product.seoKeywords,
+                createdAt:        product.createdAt,
+                metadata:         product.metadata,
+            },
+        ]);
+
+        const response = await this.client.bulk({ body: operations, refresh: true });
+
+        const errors = response.errors
+            ? (response.items as any[]).filter((i) => i.index?.error).length
+            : 0;
+
+        this.logger.log(`Bulk indexed ${products.length - errors} products, ${errors} errors`);
+        return { indexed: products.length - errors, errors };
+    }
+
+    // ── Search ─────────────────────────────────────────────────────────────────
+
+    async search(query: string, filters: SearchFilters) {
+        const mustQueries: any[] = [];
+
         if (query) {
             mustQueries.push({
                 multi_match: {
@@ -63,17 +145,14 @@ export class ElasticsearchService {
             });
         }
 
-        // Category filter
         if (filters.category) {
             mustQueries.push({ term: { category: filters.category } });
         }
 
-        // Brand filter
         if (filters.brands?.length) {
             mustQueries.push({ terms: { brand: filters.brands } });
         }
 
-        // Price range
         if (filters.minPrice || filters.maxPrice) {
             mustQueries.push({
                 range: {
@@ -85,13 +164,12 @@ export class ElasticsearchService {
             });
         }
 
-        // Stock filter
         if (filters.inStock) {
             mustQueries.push({ range: { stock: { gt: 0 } } });
         }
 
         const result = await this.client.search({
-            index: 'products',
+            index: PRODUCTS_INDEX,
             from: (filters.page - 1) * filters.limit,
             size: filters.limit,
             body: {
@@ -105,10 +183,13 @@ export class ElasticsearchService {
             },
         } as any);
 
-        const total = typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value || 0;
+        const total =
+            typeof result.hits.total === 'number'
+                ? result.hits.total
+                : result.hits.total?.value ?? 0;
 
         return {
-            products: result.hits.hits.map(hit => hit._source),
+            products: result.hits.hits.map((hit) => hit._source),
             total,
         };
     }
@@ -117,18 +198,15 @@ export class ElasticsearchService {
         await this.client.ping();
     }
 
-    private getSortClause(sortBy: string) {
+    // ── Private helpers ────────────────────────────────────────────────────────
+
+    private getSortClause(sortBy?: string) {
         switch (sortBy) {
-            case 'price-low':
-                return [{ price: { order: 'asc' as const } }];
-            case 'price-high':
-                return [{ price: { order: 'desc' as const } }];
-            case 'newest':
-                return [{ createdAt: { order: 'desc' as const } }];
-            case 'rating':
-                return [{ 'metadata.avgRating': { order: 'desc' as const } }];
-            default:
-                return [{ _score: { order: 'desc' as const } }]; // Relevance
+            case 'price-low':  return [{ price: { order: 'asc' as const } }];
+            case 'price-high': return [{ price: { order: 'desc' as const } }];
+            case 'newest':     return [{ createdAt: { order: 'desc' as const } }];
+            case 'rating':     return [{ 'metadata.avgRating': { order: 'desc' as const } }];
+            default:           return [{ _score: { order: 'desc' as const } }];
         }
     }
 }

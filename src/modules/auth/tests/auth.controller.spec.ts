@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthController } from '../controllers/auth.controller';
 import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dtos/register.dto';
@@ -25,8 +26,12 @@ describe('AuthController', () => {
             controllers: [AuthController],
             providers: [
                 { provide: AuthService, useValue: authService },
+                { provide: ThrottlerGuard, useValue: { canActivate: jest.fn().mockReturnValue(true) } },
             ],
-        }).compile();
+        })
+            .overrideGuard(ThrottlerGuard)
+            .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+            .compile();
 
         controller = module.get<AuthController>(AuthController);
     });

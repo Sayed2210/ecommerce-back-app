@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Your Order Has Shipped</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f9f9f9; margin: 0; padding: 0;">
+  <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 32px;">
+
+    <h2 style="color: #1a6bb5; margin-top: 0;">Your Order Is On Its Way!</h2>
+    <p>Great news — your order <strong>#{{orderNumber}}</strong> has been shipped.</p>
+
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0 24px;">
+      <tr>
+        <td style="padding: 8px; border: 1px solid #eee; font-weight: bold; width: 40%;">Carrier</td>
+        <td style="padding: 8px; border: 1px solid #eee;">{{carrier}}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px; border: 1px solid #eee; font-weight: bold;">Tracking Number</td>
+        <td style="padding: 8px; border: 1px solid #eee; font-family: monospace;">{{trackingNumber}}</td>
+      </tr>
+    </table>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+    <p style="font-size: 12px; color: #999; margin: 0;">
+      Questions? Contact us at <a href="mailto:{{supportEmail}}" style="color: #007bff;">{{supportEmail}}</a><br>
+      © {{year}} {{appName}}
+    </p>
+  </div>
+</body>
+</html>

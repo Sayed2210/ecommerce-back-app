@@ -3,6 +3,8 @@ import { config } from 'dotenv';
 
 config();
 
+const isCompiled = __filename.endsWith('.js');
+
 export const AppDataSource = new DataSource({
     type: 'postgres',
     host: process.env.DATABASE_HOST,
@@ -10,8 +12,12 @@ export const AppDataSource = new DataSource({
     username: process.env.DATABASE_USERNAME,
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
-    entities: ['src/modules/**/entities/*.entity.ts'],
-    migrations: ['src/infrastructure/database/migrations/*.ts'],
+    entities: isCompiled
+        ? ['dist/modules/**/entities/*.entity.js']
+        : ['src/modules/**/entities/*.entity.ts'],
+    migrations: isCompiled
+        ? ['dist/infrastructure/database/migrations/*.js']
+        : ['src/infrastructure/database/migrations/*.ts'],
     synchronize: false,
     logging: process.env.NODE_ENV === 'development',
 });

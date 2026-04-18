@@ -8,6 +8,7 @@ import { CheckoutService } from './services/checkout.service';
 import { PaymentService } from './services/payment.service';
 import { ShippingService } from './services/shipping.service';
 import { CouponService } from './services/coupon.service';
+import { TaxService } from './services/tax.service';
 import { OrderRepository } from './repositories/order.repository';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
@@ -29,6 +30,7 @@ import { UsersModule } from '../users/users.module';
         CheckoutService,
         PaymentService,
         ShippingService,
+        TaxService,
         CouponService,
         OrderRepository,
     ],

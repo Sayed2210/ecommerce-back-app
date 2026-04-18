@@ -39,7 +39,7 @@ describe('CategoriesService', () => {
         it('should return all categories', async () => {
             const result = [];
             repository.find.mockResolvedValue(result);
-            expect(await service.findAll()).toBe(result);
+            expect(await service.findAll({ page: 1, limit: 10 })).toBe(result);
         });
     });
 
