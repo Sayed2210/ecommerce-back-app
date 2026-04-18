@@ -1,6 +1,7 @@
 import {
     Controller,
     Post,
+    Patch,
     Body,
     HttpCode,
     HttpStatus,
@@ -15,6 +16,7 @@ import { LoginDto } from '../dtos/login.dto';
 import { RefreshTokenDto } from '../dtos/refresh-token.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
+import { ChangePasswordDto } from '../dtos/change-password.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 /**
@@ -106,6 +108,21 @@ export class AuthController {
     @ApiResponse({ status: 400, description: 'Invalid or expired token' })
     async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
         return this.authService.resetPassword(resetPasswordDto);
+    }
+
+    /**
+     * Change password for authenticated user
+     */
+    @Patch('change-password')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Change password', description: 'Change password for the currently authenticated user' })
+    @ApiBody({ type: ChangePasswordDto })
+    @ApiResponse({ status: 200, description: 'Password changed successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized or current password is incorrect' })
+    async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+        return this.authService.changePassword(req.user.id, changePasswordDto);
     }
 
     /**

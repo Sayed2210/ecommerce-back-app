@@ -10,6 +10,7 @@ import { LoginDto } from '../dtos/login.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { RefreshTokenDto } from '../dtos/refresh-token.dto';
+import { ChangePasswordDto } from '../dtos/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -117,6 +118,27 @@ export class AuthService {
 
         await this.userRepository.update(user.id, { isEmailVerified: true });
         return { message: 'Email verified successfully' };
+    }
+
+    async changePassword(userId: string, dto: ChangePasswordDto) {
+        const user = await this.userRepository.findOneOrFail({ id: userId });
+
+        const isCurrentPasswordValid = await this.passwordService.verify(dto.currentPassword, user.passwordHash);
+        if (!isCurrentPasswordValid) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+        if (dto.currentPassword === dto.newPassword) {
+            throw new BadRequestException('New password must be different from current password');
+        }
+        if (dto.newPassword !== dto.confirmPassword) {
+            throw new BadRequestException('Passwords do not match');
+        }
+
+
+        const hashedPassword = await this.passwordService.hash(dto.newPassword);
+        await this.userRepository.update(userId, { passwordHash: hashedPassword });
+
+        return { message: 'Password changed successfully' };
     }
 
     async logout(refreshToken: string) {
