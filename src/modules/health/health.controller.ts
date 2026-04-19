@@ -25,7 +25,13 @@ export class HealthController {
     return this.health.check([
       () => this.db.pingCheck('database'),
       () => this.redis.isHealthy('redis'),
-      () => this.elasticsearch.isHealthy('elasticsearch'),
+      async () => {
+        try {
+          return await this.elasticsearch.isHealthy('elasticsearch');
+        } catch {
+          return { elasticsearch: { status: 'down' } };
+        }
+      },
     ]);
   }
 }
