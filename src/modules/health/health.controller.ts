@@ -29,7 +29,7 @@ export class HealthController {
         try {
           return await this.elasticsearch.isHealthy('elasticsearch');
         } catch {
-          return { elasticsearch: { status: 'up', message: 'degraded' } };
+          return { elasticsearch: { status: 'down' } };
         }
       },
     ]);
