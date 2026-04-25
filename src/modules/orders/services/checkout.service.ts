@@ -19,7 +19,6 @@ import { TaxService } from './tax.service';
 import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
 import { Address } from '../../users/entities/address.entity';
-import { PaymentGateway } from '../entities/payment.entity';
 
 @Injectable()
 export class CheckoutService {
@@ -197,7 +196,12 @@ export class CheckoutService {
 
       // Update coupon usage count
       if (dto.couponCode) {
-        await manager.increment(Coupon, { code: dto.couponCode }, 'usageCount', 1);
+        await manager.increment(
+          Coupon,
+          { code: dto.couponCode },
+          'usageCount',
+          1,
+        );
       }
 
       // Reserve inventory
