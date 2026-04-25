@@ -6,21 +6,20 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { Order } from '../entities/order.entity';
+import { Order, OrderStatus, PaymentMethod } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Cart } from '../../cart/entities/cart.entity';
 import { CartItem } from '../../cart/entities/cart-item.entity';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
 import { Coupon, CouponType } from '../entities/coupon.entity';
-import { OrderStatus } from '../entities/order.entity';
 import { PaymentService } from './payment.service';
 import { ShippingService } from './shipping.service';
 import { TaxService } from './tax.service';
 import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
 import { Address } from '../../users/entities/address.entity';
-import { PaymentGateway } from '../entities';
+import { PaymentGateway } from '../entities/payment.entity';
 
 @Injectable()
 export class CheckoutService {
@@ -79,13 +78,24 @@ export class CheckoutService {
         throw new BadRequestException('Cart is empty');
       }
 
-      // Validate inventory
+      // Validate inventory with pessimistic lock to prevent race conditions
       for (const item of cart.items) {
+        const variantWithLock = await manager
+          .createQueryBuilder('variant', 'v')
+          .setLock('pessimistic_write')
+          .leftJoinAndSelect('v.product', 'product')
+          .where('v.id = :id', { id: item.variant.id })
+          .getOne();
+
+        if (!variantWithLock) {
+          throw new BadRequestException('Product variant not found');
+        }
+
         const available =
-          item.variant.inventoryQuantity - item.variant.reservedQuantity;
+          variantWithLock.inventoryQuantity - variantWithLock.reservedQuantity;
         if (item.quantity > available) {
           throw new BadRequestException(
-            `Insufficient stock for ${item.variant.product.name?.['en'] ?? JSON.stringify(item.variant.product.name)}`,
+            `Insufficient stock for ${variantWithLock.product?.name?.['en'] ?? JSON.stringify(variantWithLock.product?.name)}`,
           );
         }
       }
@@ -147,23 +157,24 @@ export class CheckoutService {
       );
       totalAmount += taxAmount;
 
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
       // Create order
       const order = manager.create(Order, {
         user: { id: userId },
+        orderNumber,
         items: [],
         subtotal,
         taxAmount,
         discountAmount: discount,
         shippingCost,
         totalAmount,
+        currency: 'USD',
         status: OrderStatus.PENDING,
         shippingAddress: { id: dto.shippingAddressId },
-        paymentInfo: { method: dto.paymentMethod }, // Entity structure mismatch? Order has paymentInfo or paymentMethod?
+        paymentMethod: dto.paymentMethod,
       });
-      // Update: Order entity check needed.
-      // CheckoutService line 92: `paymentMethod: dto.paymentMethod`.
-      // Order entity line? I'll check Order entity fields.
-      // Assuming `discount` -> `discountAmount`.
 
       const savedOrder = await manager.save(Order, order);
 
@@ -184,6 +195,11 @@ export class CheckoutService {
       await manager.save(OrderItem, orderItems);
       savedOrder.items = orderItems;
 
+      // Update coupon usage count
+      if (dto.couponCode) {
+        await manager.increment(Coupon, { code: dto.couponCode }, 'usageCount', 1);
+      }
+
       // Reserve inventory
       for (const item of cart.items) {
         // Update ProductVariant
@@ -200,13 +216,13 @@ export class CheckoutService {
 
       // Process payment
       let paymentResult;
-      if (dto.paymentMethod === PaymentGateway.STRIPE) {
+      if (dto.paymentMethod === PaymentMethod.STRIPE) {
         paymentResult = await this.paymentService.createPaymentIntent(
           savedOrder.id,
           totalAmount,
           dto.paymentToken,
         );
-      } else if (dto.paymentMethod === PaymentGateway.CASH_ON_DELIVERY) {
+      } else if (dto.paymentMethod === PaymentMethod.COD) {
         paymentResult = { status: 'pending', message: 'Cash on delivery' };
       }
 

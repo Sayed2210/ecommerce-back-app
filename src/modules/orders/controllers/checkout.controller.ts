@@ -100,7 +100,7 @@ export class CheckoutController {
   })
   @ApiResponse({ status: 200, description: 'Coupon successfully applied' })
   @ApiResponse({ status: 400, description: 'Invalid or expired coupon' })
-  async applyCoupon(@Body('code') code: string) {
-    return this.checkoutService.applyCoupon({ code } as any);
+  async applyCoupon(@Request() req, @Body('code') code: string) {
+    return this.checkoutService.applyCoupon({ code, userId: req.user.id } as any);
   }
 }
