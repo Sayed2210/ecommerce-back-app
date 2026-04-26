@@ -53,8 +53,9 @@ export class OrdersService {
       relations: [
         'user',
         'items',
-        'items.productVariant',
-        'items.productVariant.product',
+        'items.product',
+        'items.variant',
+        'items.variant.product',
         'shippingAddress',
         'coupon',
       ],
@@ -64,7 +65,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (userId && order.user.id !== userId) {
+    if (userId && order.user?.id !== userId) {
       throw new BadRequestException('You cannot access this order');
     }
 
