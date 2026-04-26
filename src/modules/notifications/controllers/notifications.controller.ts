@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { NotificationService } from '../services/notification.service';
 import { CreateNotificationDto } from '../dto/notification.dto';
@@ -59,8 +60,8 @@ export class NotificationsController {
   })
   @ApiParam({ name: 'id', description: 'Notification ID' })
   @ApiResponse({ status: 200, description: 'Notification updated' })
-  markAsRead(@Param('id') id: string) {
-    return this.notificationService.markAsRead(id);
+  markAsRead(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+    return this.notificationService.markAsRead(id, req.user.id);
   }
 
   @Patch('read-all')
@@ -80,7 +81,7 @@ export class NotificationsController {
   })
   @ApiParam({ name: 'id', description: 'Notification ID' })
   @ApiResponse({ status: 200, description: 'Notification deleted' })
-  remove(@Param('id') id: string) {
-    return this.notificationService.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+    return this.notificationService.remove(id, req.user.id);
   }
 }
