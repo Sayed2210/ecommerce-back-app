@@ -56,6 +56,23 @@ export class OrdersController {
     );
   }
 
+  @Get('admin/all')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get all orders (Admin)',
+    description: 'Get all orders across all users (Admin only)',
+  })
+  @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
+  @ApiResponse({ status: 200, description: 'Orders retrieved' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  async findAllForAdmin(
+    @Query('status') status?: OrderStatus,
+    @Query() pagination?: PaginationDto,
+  ) {
+    return this.ordersService.findAll({ status }, pagination);
+  }
+
   /**
    * Get order details by ID
    */

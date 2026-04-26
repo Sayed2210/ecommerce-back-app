@@ -33,12 +33,16 @@ export class CategoriesService {
   }
 
   async findAll(pagination: PaginationDto) {
-    return this.categoryRepository.find({
+    // create page and limit with defaults
+    const { page = 1, limit = 20 } = pagination;
+
+    const [categories, total] = await this.categoryRepository.findAndCount({
       where: { isActive: true },
       order: { name: 'ASC' },
-      skip: (pagination.page - 1) * pagination.limit,
-      take: pagination.limit,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+    return { categories, total, page, limit };
   }
 
   async findOne(id: string) {
