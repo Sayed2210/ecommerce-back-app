@@ -21,7 +21,14 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order, OrderItem, Payment, Shipping, Coupon, WebhookEvent]),
+    TypeOrmModule.forFeature([
+      Order,
+      OrderItem,
+      Payment,
+      Shipping,
+      Coupon,
+      WebhookEvent,
+    ]),
     CartModule,
     UsersModule,
   ],

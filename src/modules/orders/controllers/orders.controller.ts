@@ -24,10 +24,6 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '../../auth/entities/user.entity';
 
-/**
- * Orders Controller
- * Manages order viewing, tracking, and status updates
- */
 @ApiTags('Orders')
 @ApiBearerAuth()
 @Controller('orders')
@@ -35,9 +31,6 @@ import { UserRole } from '../../auth/entities/user.entity';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  /**
-   * Get all orders for current user
-   */
   @Get()
   @ApiOperation({
     summary: 'Get user orders',
@@ -73,9 +66,19 @@ export class OrdersController {
     return this.ordersService.findAll({ status }, pagination);
   }
 
-  /**
-   * Get order details by ID
-   */
+  @Get('analytics/summary')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get order analytics',
+    description: 'Get order analytics summary (Admin only)',
+  })
+  @ApiResponse({ status: 200, description: 'Analytics retrieved' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  async getAnalytics() {
+    return this.ordersService.getOrderAnalytics();
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get order details',
@@ -92,9 +95,6 @@ export class OrdersController {
     return this.ordersService.findOne(id, req.user.id);
   }
 
-  /**
-   * Update order status (Admin only)
-   */
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -115,21 +115,5 @@ export class OrdersController {
     @Body('status') status: OrderStatus,
   ) {
     return this.ordersService.updateStatus(id, status);
-  }
-  // ... (skip unchanged)
-  /**
-   * Get order analytics (Admin only)
-   */
-  @Get('analytics/summary')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({
-    summary: 'Get order analytics',
-    description: 'Get order analytics summary (Admin only)',
-  })
-  @ApiResponse({ status: 200, description: 'Analytics retrieved' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
-  async getAnalytics() {
-    return this.ordersService.getOrderAnalytics();
   }
 }

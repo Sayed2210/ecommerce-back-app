@@ -7,6 +7,7 @@ import { NotFoundException } from '@nestjs/common';
 
 const mockCategoryRepository = () => ({
   find: jest.fn(),
+  findAndCount: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
@@ -39,10 +40,16 @@ describe('CategoriesService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all categories', async () => {
-      const result = [];
-      repository.find.mockResolvedValue(result);
-      expect(await service.findAll({ page: 1, limit: 10 })).toBe(result);
+    it('should return paginated categories', async () => {
+      const categories = [{ id: 'c1', name: { en: 'Cat', ar: 'Cat' } }];
+      repository.findAndCount.mockResolvedValue([categories, 1] as any);
+      const result = await service.findAll({ page: 1, limit: 10 });
+      expect(result).toEqual({
+        categories,
+        total: 1,
+        page: 1,
+        limit: 10,
+      });
     });
   });
 

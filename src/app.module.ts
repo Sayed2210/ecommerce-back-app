@@ -44,7 +44,7 @@ import { StorageModule } from './infrastructure/storage/storage.module';
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        synchronize: false,
       }),
     }),
 
