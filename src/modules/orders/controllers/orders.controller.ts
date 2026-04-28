@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { OrdersService } from '../services/orders.service';
 import { OrderStatus } from '../entities/order.entity';
+import { UpdateOrderStatusDto } from '../dtos/update-order-status.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -73,10 +74,32 @@ export class OrdersController {
     summary: 'Get order analytics',
     description: 'Get order analytics summary (Admin only)',
   })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    type: String,
+    description: 'Start date (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    type: String,
+    description: 'End date (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'granularity',
+    required: false,
+    enum: ['day', 'week', 'month'],
+    description: 'Time granularity',
+  })
   @ApiResponse({ status: 200, description: 'Analytics retrieved' })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
-  async getAnalytics() {
-    return this.ordersService.getOrderAnalytics();
+  async getAnalytics(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('granularity') granularity?: 'day' | 'week' | 'month',
+  ) {
+    return this.ordersService.getOrderAnalytics({ from, to, granularity });
   }
 
   @Get(':id')
@@ -112,8 +135,8 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   async updateStatus(
     @Param('id') id: string,
-    @Body('status') status: OrderStatus,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
-    return this.ordersService.updateStatus(id, status);
+    return this.ordersService.updateStatus(id, updateOrderStatusDto.status);
   }
 }

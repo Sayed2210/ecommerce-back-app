@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { NewsletterService } from '../services/newsletter.service';
 import { SendCampaignDto, SubscribeDto } from '../dtos/subscribe.dto';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
@@ -20,8 +20,15 @@ export class NewsletterController {
 
   @Post('unsubscribe')
   @ApiOperation({ summary: 'Unsubscribe from newsletter' })
-  unsubscribe(@Body('token') token: string) {
-    return this.newsletterService.unsubscribe(token);
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { email: { type: 'string', example: 'user@example.com' } },
+      required: ['email'],
+    },
+  })
+  unsubscribe(@Body('email') email: string) {
+    return this.newsletterService.unsubscribeByEmail(email);
   }
 
   @Get('stats')

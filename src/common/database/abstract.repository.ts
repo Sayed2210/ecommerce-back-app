@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { NotFoundException } from '@nestjs/common';
+import { PaginatedResponseDto } from '../dtos/paginated-response.dto';
 
 export abstract class AbstractRepository<T extends ObjectLiteral> {
   constructor(protected readonly repository: TypeORMRepository<T>) {}
@@ -39,13 +40,13 @@ export abstract class AbstractRepository<T extends ObjectLiteral> {
     page: number = 1,
     limit: number = 10,
     where?: FindOptionsWhere<T>,
-  ): Promise<{ data: T[]; total: number; page: number; limit: number }> {
+  ): Promise<PaginatedResponseDto<T>> {
     const [data, total] = await this.repository.findAndCount({
       where,
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total, page, limit };
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
   async create(data: DeepPartial<T>): Promise<T> {

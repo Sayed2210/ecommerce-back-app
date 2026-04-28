@@ -44,8 +44,8 @@ export class AuthService {
     await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
 
     return {
+      ...tokens,
       user: this.sanitizeUser(user),
-      tokens,
     };
   }
 
@@ -67,8 +67,8 @@ export class AuthService {
     await this.tokenService.saveRefreshToken(user.id, tokens.refreshToken);
 
     return {
+      ...tokens,
       user: this.sanitizeUser(user),
-      tokens,
     };
   }
 
@@ -82,7 +82,10 @@ export class AuthService {
     await this.tokenService.revokeRefreshToken(dto.refreshToken);
     await this.tokenService.saveRefreshToken(user.id, newTokens.refreshToken);
 
-    return newTokens;
+    return {
+      ...newTokens,
+      user: this.sanitizeUser(user),
+    };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
@@ -157,8 +160,8 @@ export class AuthService {
     return { message: 'Password changed successfully' };
   }
 
-  async logout(refreshToken: string) {
-    await this.tokenService.revokeRefreshToken(refreshToken);
+  async logout(userId: string) {
+    await this.tokenService.revokeAllUserTokens(userId);
     return { message: 'Logged out successfully' };
   }
 

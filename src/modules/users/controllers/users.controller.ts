@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from '../services/users.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
+import { UserResponseDto } from '../dtos/user-response.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -62,7 +63,11 @@ export class UsersController {
     summary: 'Get current user',
     description: 'Get authenticated user profile',
   })
-  @ApiResponse({ status: 200, description: 'User profile retrieved' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved',
+    type: UserResponseDto,
+  })
   async getCurrentUser(@Request() req) {
     return this.usersService.findOne(req.user.id);
   }
@@ -82,19 +87,6 @@ export class UsersController {
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     return this.usersService.update(req.user.id, updateProfileDto);
-  }
-
-  /**
-   * Get current user's wishlist
-   */
-  @Get('me/wishlist')
-  @ApiOperation({
-    summary: 'Get wishlist',
-    description: 'Get current user wishlist',
-  })
-  @ApiResponse({ status: 200, description: 'Wishlist retrieved' })
-  async getWishlist(@Request() req) {
-    return this.usersService.getWishlist(req.user.id);
   }
 
   /**

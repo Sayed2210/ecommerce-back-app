@@ -40,6 +40,16 @@ export class FilterDto {
   sortBy?: string;
 
   @ApiProperty({
+    description: 'Sort order (asc or desc)',
+    example: 'desc',
+    required: false,
+    enum: ['asc', 'desc'],
+  })
+  @IsString()
+  @IsOptional()
+  sortOrder?: 'asc' | 'desc';
+
+  @ApiProperty({
     description: 'Minimum price filter',
     example: 10.0,
     required: false,

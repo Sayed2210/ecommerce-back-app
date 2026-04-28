@@ -60,13 +60,34 @@ export class SearchDto {
   inStock?: boolean;
 
   @ApiProperty({
-    example: 'price_asc',
-    description: 'Sort order',
+    example: 'price',
+    description: 'Sort field (e.g., price, name, createdAt)',
     required: false,
   })
   @IsString()
   @IsOptional()
   sortBy?: string;
+
+  @ApiProperty({
+    example: 'desc',
+    description: 'Sort order (asc or desc)',
+    required: false,
+    enum: ['asc', 'desc'],
+  })
+  @IsString()
+  @IsOptional()
+  sortOrder?: 'asc' | 'desc';
+
+  @ApiProperty({
+    example: ['summer-sale', 'new-arrival'],
+    description: 'Filter by tag slugs',
+    required: false,
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
 
   @ApiProperty({
     example: 1,

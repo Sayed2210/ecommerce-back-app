@@ -82,7 +82,7 @@ describe('NotificationService', () => {
       notificationRepository.findAndCount.mockResolvedValue([[], 0]);
       const result = await service.findAll('u1', { page: 1, limit: 10 });
       expect(result.data).toEqual([]);
-      expect(result.total).toBe(0);
+      expect(result.meta.total).toBe(0);
     });
   });
 

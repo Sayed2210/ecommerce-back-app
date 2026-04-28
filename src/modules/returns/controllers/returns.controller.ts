@@ -9,7 +9,12 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ReturnsService } from '../services/returns.service';
 import { CreateReturnDto } from '../dtos/create-return.dto';
 import { ProcessReturnDto } from '../dtos/process-return.dto';
@@ -43,8 +48,16 @@ export class ReturnsController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'List all return requests (Admin)' })
-  findAll(@Query() pagination: PaginationDto) {
-    return this.returnsService.findAll(pagination);
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['pending', 'approved', 'rejected', 'received'],
+  })
+  findAll(
+    @Query() pagination: PaginationDto,
+    @Query('status') status?: string,
+  ) {
+    return this.returnsService.findAll(pagination, status);
   }
 
   @Get(':id')

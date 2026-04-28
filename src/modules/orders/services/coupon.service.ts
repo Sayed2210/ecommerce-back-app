@@ -9,6 +9,8 @@ import { Repository } from 'typeorm';
 import { Coupon } from '../entities/coupon.entity';
 import { Order } from '../entities/order.entity';
 import { CreateCouponDto, UpdateCouponDto } from '../dtos/create-coupon.dto';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
 
 export interface CouponValidationResult {
   valid: boolean;
@@ -42,10 +44,16 @@ export class CouponService {
     return this.couponRepository.save(coupon);
   }
 
-  async findAll(): Promise<Coupon[]> {
-    return this.couponRepository.find({
+  async findAll(
+    pagination: PaginationDto,
+  ): Promise<PaginatedResponseDto<Coupon>> {
+    const { page = 1, limit = 10 } = pagination;
+    const [data, total] = await this.couponRepository.findAndCount({
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
   async findOne(id: string): Promise<Coupon> {

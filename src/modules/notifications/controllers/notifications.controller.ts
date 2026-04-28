@@ -10,6 +10,8 @@ import {
   Request,
   Query,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { NotificationService } from '../services/notification.service';
 import { CreateNotificationDto } from '../dto/notification.dto';
@@ -75,12 +77,13 @@ export class NotificationsController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete notification',
     description: 'Delete a notification',
   })
   @ApiParam({ name: 'id', description: 'Notification ID' })
-  @ApiResponse({ status: 200, description: 'Notification deleted' })
+  @ApiResponse({ status: 204, description: 'Notification deleted' })
   remove(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     return this.notificationService.remove(id, req.user.id);
   }

@@ -9,6 +9,7 @@ import { Review } from '../entities/review.entity';
 import { CreateReviewDto } from '../dtos/create-review.dto';
 import { UpdateReviewDto } from '../dtos/update-review.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
 
 @Injectable()
 export class ReviewsService {
@@ -42,7 +43,7 @@ export class ReviewsService {
       take: limit,
     });
 
-    return { data, total, page, limit };
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
   async findOne(id: string): Promise<Review> {

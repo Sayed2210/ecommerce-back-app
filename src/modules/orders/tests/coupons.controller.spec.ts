@@ -38,8 +38,9 @@ describe('CouponsController', () => {
 
   describe('findAll', () => {
     it('should return all coupons', async () => {
-      await controller.findAll();
-      expect(service.findAll).toHaveBeenCalled();
+      const pagination = { page: 1, limit: 10 };
+      await controller.findAll(pagination as any);
+      expect(service.findAll).toHaveBeenCalledWith(pagination);
     });
   });
 });

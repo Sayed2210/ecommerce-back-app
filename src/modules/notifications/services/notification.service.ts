@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Notification } from '../entities/notification.entity';
 import { CreateNotificationDto } from '../dto/notification.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
 import {
   NotificationSocketDto,
   NotificationsGateway,
@@ -44,7 +45,7 @@ export class NotificationService {
       take: limit,
     });
 
-    return { data, total, page, limit };
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
   async markAsRead(id: string, userId: string): Promise<Notification> {
