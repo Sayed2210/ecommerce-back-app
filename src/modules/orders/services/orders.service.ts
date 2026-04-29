@@ -12,6 +12,7 @@ import { OrderItem } from '../entities/order-item.entity';
 import { OrderStatus } from '../entities/order.entity';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
+import { PointsService } from '../../points/services/points.service';
 
 @Injectable()
 export class OrdersService {
@@ -22,6 +23,7 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
+    private readonly pointsService: PointsService,
   ) {}
 
   async findAll(
@@ -77,7 +79,6 @@ export class OrdersService {
   async updateStatus(id: string, status: OrderStatus, userId?: string) {
     const order = await this.findOne(id, userId);
 
-    // Validate status transition
     const validTransitions = {
       [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
       [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
@@ -91,18 +92,25 @@ export class OrdersService {
       validTransitions[order.status] &&
       !validTransitions[order.status].includes(status)
     ) {
-      // Allow if admin force, but logic here seems to enforce flow.
-      // Relaxing mismatch logic or keeping as is.
-      // Keeping check but ensuring types match.
       throw new BadRequestException('Invalid order status transition');
     }
 
     order.status = status;
-
-    // Status history is not in schema/entity
-    // order.statusHistory ... removed
-
     await this.orderRepository.save(order);
+
+    if (status === OrderStatus.DELIVERED && order.user?.id) {
+      try {
+        await this.pointsService.earnPoints(
+          order.user.id,
+          order.id,
+          Number(order.totalAmount),
+        );
+        this.logger.log(`Points earned for order ${id}`);
+      } catch (error) {
+        this.logger.error(`Failed to earn points for order ${id}`, error);
+      }
+    }
+
     this.logger.log(`Order ${id} status updated to ${status}`);
 
     return order;

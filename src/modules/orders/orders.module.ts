@@ -9,6 +9,7 @@ import { PaymentService } from './services/payment.service';
 import { ShippingService } from './services/shipping.service';
 import { CouponService } from './services/coupon.service';
 import { TaxService } from './services/tax.service';
+import { InvoiceService } from './services/invoice.service';
 import { OrderRepository } from './repositories/order.repository';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
@@ -18,6 +19,10 @@ import { Coupon } from './entities/coupon.entity';
 import { WebhookEvent } from './entities/webhook-event.entity';
 import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
+import { CurrenciesModule } from '../currencies/currencies.module';
+import { ShippingConfigModule } from '../shipping-config/shipping-config.module';
+import { PointsModule } from '../points/points.module';
+import { SendInvoiceProcessor } from './jobs/send-invoice.job';
 
 @Module({
   imports: [
@@ -31,6 +36,9 @@ import { UsersModule } from '../users/users.module';
     ]),
     CartModule,
     UsersModule,
+    CurrenciesModule,
+    ShippingConfigModule,
+    PointsModule,
   ],
   controllers: [OrdersController, CheckoutController, CouponsController],
   providers: [
@@ -40,8 +48,10 @@ import { UsersModule } from '../users/users.module';
     ShippingService,
     TaxService,
     CouponService,
+    InvoiceService,
+    SendInvoiceProcessor,
     OrderRepository,
   ],
-  exports: [OrdersService, OrderRepository, PaymentService],
+  exports: [OrdersService, OrderRepository, PaymentService, InvoiceService],
 })
 export class OrdersModule {}

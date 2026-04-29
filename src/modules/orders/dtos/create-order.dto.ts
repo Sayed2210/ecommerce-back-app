@@ -1,6 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentMethod } from '../entities/order.entity';
+import { RedemptionType } from '@modules/points/entities/point-redemption.entity';
 
 export class CreateOrderDto {
   @ApiProperty({
@@ -36,4 +43,29 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   paymentToken?: string;
+
+  @ApiPropertyOptional({
+    description: 'Currency code for checkout (defaults to USD)',
+    example: 'EGP',
+  })
+  @IsString()
+  @IsOptional()
+  currencyCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Number of points to redeem',
+    example: 100,
+  })
+  @IsNumber()
+  @IsOptional()
+  redeemPoints?: number;
+
+  @ApiPropertyOptional({
+    description: 'Redemption type when using points',
+    enum: RedemptionType,
+    example: RedemptionType.DISCOUNT,
+  })
+  @IsEnum(RedemptionType)
+  @IsOptional()
+  redemptionType?: RedemptionType;
 }

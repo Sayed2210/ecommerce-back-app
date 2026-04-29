@@ -20,6 +20,8 @@ import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
 import { Product } from '../../products/entities/product.entity';
 import { Address } from '../../users/entities/address.entity';
+import { CurrenciesService } from '../../currencies/services/currencies.service';
+import { PointsService } from '../../points/services/points.service';
 
 @Injectable()
 export class CheckoutService {
@@ -30,14 +32,14 @@ export class CheckoutService {
     private readonly paymentService: PaymentService,
     private readonly shippingService: ShippingService,
     private readonly taxService: TaxService,
-    private readonly BullmqService: BullmqService,
+    private readonly bullmqService: BullmqService,
+    private readonly currenciesService: CurrenciesService,
+    private readonly pointsService: PointsService,
     @InjectRepository(Coupon)
     private readonly couponRepository: Repository<Coupon>,
   ) {}
 
   async validateCheckout(userId: string, _orderData: any) {
-    // Simple validation logic reusing parts of createOrder or just checking prerequisites
-    // For now, checks if cart exists and is not empty as a basic validation
     const cart = await this.dataSource.manager.findOne(Cart, {
       where: { user: { id: userId } },
       relations: [
@@ -52,7 +54,6 @@ export class CheckoutService {
       throw new BadRequestException('Cart is empty');
     }
 
-    // Check inventory
     const errors = [];
     for (const item of cart.items) {
       const hasVariant = !!item.variant;
@@ -88,7 +89,6 @@ export class CheckoutService {
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     return this.dataSource.transaction(async (manager) => {
-      // Get cart
       const cart = await manager.findOne(Cart, {
         where: { user: { id: userId } },
         relations: [
@@ -103,7 +103,6 @@ export class CheckoutService {
         throw new BadRequestException('Cart is empty');
       }
 
-      // Validate inventory with pessimistic lock to prevent race conditions
       for (const item of cart.items) {
         if (item.variant?.id) {
           const variantWithLock = await manager
@@ -145,17 +144,19 @@ export class CheckoutService {
         }
       }
 
-      // Calculate totals
       let subtotal = 0;
+      let totalWeight = 0;
       for (const item of cart.items) {
         const price =
           Number(item.product.basePrice) +
           Number(item.variant?.priceModifier ?? 0);
         subtotal += price * item.quantity;
+        totalWeight += Number(item.product.weight || 0) * item.quantity;
       }
 
       let totalAmount = subtotal;
       let discount = 0;
+      let shippingCost = 0;
 
       // Apply coupon if provided
       if (dto.couponCode) {
@@ -171,7 +172,6 @@ export class CheckoutService {
           throw new BadRequestException('Coupon has expired');
         }
 
-        // Simplified discount logic assuming percentage for now or reusing value directly
         if (coupon.type === CouponType.PERCENTAGE) {
           discount = (subtotal * (coupon.value || 0)) / 100;
           if (coupon.maxDiscount) {
@@ -179,20 +179,45 @@ export class CheckoutService {
           }
         } else if (coupon.type === CouponType.FIXED) {
           discount = Math.min(coupon.value || 0, subtotal);
+        } else if (coupon.type === CouponType.FREE_SHIPPING) {
+          shippingCost = 0;
         }
 
         totalAmount = subtotal - discount;
       }
 
-      // Calculate shipping
-      const shippingCost = await this.shippingService.calculateShipping(
-        dto.shippingAddressId,
-        totalAmount,
-      );
+      // Apply points redemption before shipping/tax if requested
+      if (dto.redeemPoints && dto.redemptionType) {
+        const redemptionResult = await this.pointsService.redeemPoints(userId, {
+          points: dto.redeemPoints,
+          type: dto.redemptionType,
+        });
+
+        if (redemptionResult.discountAmount > 0) {
+          discount += redemptionResult.discountAmount;
+          totalAmount = Math.max(0, subtotal - discount);
+        }
+        if (redemptionResult.shippingFree) {
+          shippingCost = 0;
+        }
+        if (redemptionResult.orderFree) {
+          totalAmount = 0;
+          discount = subtotal;
+          shippingCost = 0;
+        }
+      }
+
+      // Calculate shipping if not already free
+      if (shippingCost !== 0) {
+        shippingCost = await this.shippingService.calculateShipping(
+          dto.shippingAddressId,
+          totalAmount,
+          totalWeight,
+        );
+      }
 
       totalAmount += shippingCost;
 
-      // Calculate tax based on shipping destination
       const shippingAddress = await manager.findOne(Address, {
         where: { id: dto.shippingAddressId },
       });
@@ -202,10 +227,10 @@ export class CheckoutService {
       );
       totalAmount += taxAmount;
 
-      // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-      // Create order
+      const currencyCode = dto.currencyCode?.toUpperCase() || 'USD';
+
       const order = manager.create(Order, {
         user: { id: userId },
         orderNumber,
@@ -215,7 +240,7 @@ export class CheckoutService {
         discountAmount: discount,
         shippingAmount: shippingCost,
         totalAmount,
-        currency: 'USD',
+        currency: currencyCode,
         status: OrderStatus.PENDING,
         shippingAddress: { id: dto.shippingAddressId },
         paymentMethod: dto.paymentMethod,
@@ -223,7 +248,6 @@ export class CheckoutService {
 
       const savedOrder = await manager.save(Order, order);
 
-      // Create order items
       const orderItems = cart.items.map((item) => {
         const price =
           Number(item.product.basePrice) +
@@ -248,7 +272,6 @@ export class CheckoutService {
       await manager.save(OrderItem, orderItems);
       savedOrder.items = orderItems;
 
-      // Update coupon usage count
       if (dto.couponCode) {
         await manager.increment(
           Coupon,
@@ -258,7 +281,6 @@ export class CheckoutService {
         );
       }
 
-      // Reserve inventory
       for (const item of cart.items) {
         if (item.variant?.id) {
           await manager.update(
@@ -277,10 +299,8 @@ export class CheckoutService {
         );
       }
 
-      // Clear cart
       await manager.delete(CartItem, { cart: { id: cart.id } });
 
-      // Process payment
       let paymentResult;
       if (dto.paymentMethod === PaymentMethod.STRIPE) {
         paymentResult = await this.paymentService.createPaymentIntent(
@@ -292,18 +312,36 @@ export class CheckoutService {
         paymentResult = { status: 'pending', message: 'Cash on delivery' };
       }
 
-      // Send confirmation email
-      await this.BullmqService.addOrderProcessingJob('order-confirmation', {
+      await this.bullmqService.addOrderProcessingJob('order-confirmation', {
+        orderId: savedOrder.id,
+        userId,
+      });
+
+      await this.bullmqService.addOrderProcessingJob('send-invoice', {
         orderId: savedOrder.id,
         userId,
       });
 
       this.logger.log(`Order ${savedOrder.id} created successfully`);
 
-      return {
+      const result: any = {
         order: savedOrder,
         payment: paymentResult,
       };
+
+      if (dto.currencyCode && dto.currencyCode !== 'USD') {
+        try {
+          result.convertedTotal = await this.currenciesService.convert(
+            totalAmount,
+            'USD',
+            dto.currencyCode,
+          );
+        } catch {
+          // ignore conversion errors, return base currency
+        }
+      }
+
+      return result;
     });
   }
 

@@ -19,6 +19,9 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ReturnsModule } from './modules/returns/returns.module';
 import { NewsletterModule } from './modules/newsletter/newsletter.module';
 import { HealthModule } from './modules/health/health.module';
+import { CurrenciesModule } from './modules/currencies/currencies.module';
+import { ShippingConfigModule } from './modules/shipping-config/shipping-config.module';
+import { PointsModule } from './modules/points/points.module';
 
 // Infrastructure Modules
 import { CacheModule } from './infrastructure/cache/cache.module';
@@ -77,6 +80,9 @@ import { StorageModule } from './infrastructure/storage/storage.module';
     ReturnsModule,
     NewsletterModule,
     HealthModule,
+    CurrenciesModule,
+    ShippingConfigModule,
+    PointsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -289,6 +289,32 @@ export class MailerService {
     });
   }
 
+  async sendInvoiceEmail(
+    to: string,
+    data: {
+      orderNumber: string;
+      total: number;
+      items: any[];
+      shippingAddress: any;
+      firstName: string;
+    },
+    pdfBuffer: Buffer,
+  ): Promise<void> {
+    await this.sendEmailAsync({
+      to,
+      subject: `Invoice for Order #${data.orderNumber}`,
+      template: 'invoice',
+      data,
+      attachments: [
+        {
+          filename: `invoice-${data.orderNumber}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
+    });
+  }
+
   /**
    * Verify SMTP connection
    */

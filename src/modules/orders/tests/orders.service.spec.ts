@@ -4,6 +4,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { OrdersService } from '../services/orders.service';
 import { Order, OrderStatus } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
+import { PointsService } from '../../points/services/points.service';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
 describe('OrdersService', () => {
@@ -31,6 +32,10 @@ describe('OrdersService', () => {
         {
           provide: getRepositoryToken(OrderItem),
           useValue: orderItemRepository,
+        },
+        {
+          provide: PointsService,
+          useValue: { earnPoints: jest.fn() },
         },
       ],
     }).compile();

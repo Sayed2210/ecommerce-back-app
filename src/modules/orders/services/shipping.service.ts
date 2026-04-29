@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Shipping, ShippingStatus } from '../entities/shipping.entity';
 import { Address } from '../../users/entities/address.entity';
+import { ShippingConfigService } from '../../shipping-config/services/shipping-config.service';
 
 @Injectable()
 export class ShippingService {
@@ -15,11 +16,13 @@ export class ShippingService {
     @InjectRepository(Address)
     private readonly addressRepository: Repository<Address>,
     private readonly configService: ConfigService,
+    private readonly shippingConfigService: ShippingConfigService,
   ) {}
 
   async calculateShipping(
     addressId: string,
     orderValue: number,
+    orderWeight: number = 0,
   ): Promise<number> {
     const address = await this.addressRepository.findOne({
       where: { id: addressId },
@@ -29,17 +32,26 @@ export class ShippingService {
       throw new NotFoundException('Address not found');
     }
 
-    // Simple shipping calculation logic
+    const configCost = await this.shippingConfigService.calculateShipping(
+      address.country,
+      orderWeight,
+      orderValue,
+    );
+
+    if (configCost > 0) {
+      return configCost;
+    }
+
+    // Fallback to legacy config-based logic
     const freeShippingThreshold = this.configService.get<number>(
       'FREE_SHIPPING_THRESHOLD',
       100,
     );
 
     if (orderValue >= freeShippingThreshold) {
-      return 0; // Free shipping
+      return 0;
     }
 
-    // Base shipping cost varies by country/region
     const baseCost = 10;
     const regionMultiplier = address.country === 'US' ? 1 : 1.5;
 
