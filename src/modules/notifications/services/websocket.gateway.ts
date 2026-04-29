@@ -7,7 +7,23 @@ import {
 import { Server, Socket } from 'socket.io';
 
 import { JwtService } from '@nestjs/jwt';
-import { NotificationDto } from '../dto/notification.dto';
+
+type JwtPayload = {
+  sub?: string;
+};
+
+export type NotificationSocketDto = {
+  id: string;
+  type: string;
+  title: string;
+  message?: string;
+  actionUrl?: string;
+  data: Record<string, unknown>;
+  readAt?: Date;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @WebSocketGateway({
   cors: {
@@ -29,8 +45,21 @@ export class NotificationsGateway
 
   handleConnection(client: Socket) {
     try {
-      const token = client.handshake.headers.authorization?.split(' ')[1];
-      const payload = this.jwtService.verify(token);
+      const authorization = client.handshake.headers.authorization;
+      const token = authorization?.startsWith('Bearer ')
+        ? authorization.slice(7)
+        : undefined;
+
+      if (!token) {
+        throw new Error('Missing token');
+      }
+
+      const payload = this.jwtService.verify<JwtPayload>(token);
+      if (!payload?.sub) {
+        throw new Error('Invalid token payload');
+      }
+
+      client.data.userId = payload.sub;
       void client.join(`user:${payload.sub}`);
     } catch {
       client.disconnect();
@@ -38,15 +67,17 @@ export class NotificationsGateway
   }
 
   handleDisconnect(client: Socket) {
-    void client.leave(`user:${client.handshake.auth.userId}`);
+    const userId = client.data?.userId;
+    if (userId) {
+      void client.leave(`user:${userId}`);
+    }
   }
 
-  // Method to be called from other services
-  sendNotification(userId: string, notification: NotificationDto) {
+  sendNotification(userId: string, notification: NotificationSocketDto) {
     this.server.to(`user:${userId}`).emit('newNotification', notification);
   }
 
-  sendCartUpdate(userId: string, cart: any) {
+  sendCartUpdate(userId: string, cart: object) {
     this.server.to(`user:${userId}`).emit('cart_updated', cart);
   }
 }

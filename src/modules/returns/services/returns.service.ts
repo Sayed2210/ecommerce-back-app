@@ -18,6 +18,7 @@ import {
 } from '@modules/orders/entities/order.entity';
 import { OrderItem } from '@modules/orders/entities/order-item.entity';
 import { PaginationDto } from '@common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '@common/dtos/paginated-response.dto';
 import { ReturnRequestRepository } from '../repositories/return-request.repository';
 import { MailerService } from '@infrastructure/email/mailer.service';
 
@@ -96,18 +97,23 @@ export class ReturnsService {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { items, total, page, limit };
+    return new PaginatedResponseDto(items, page, limit, total);
   }
 
-  async findAll(pagination: PaginationDto) {
+  async findAll(pagination: PaginationDto, status?: string) {
     const { page = 1, limit = 10 } = pagination;
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
     const [items, total] = await this.returnRepository.findAndCount({
+      where,
       relations: ['order', 'orderItem', 'user'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { items, total, page, limit };
+    return new PaginatedResponseDto(items, page, limit, total);
   }
 
   async findOne(id: string, userId?: string): Promise<ReturnRequest> {

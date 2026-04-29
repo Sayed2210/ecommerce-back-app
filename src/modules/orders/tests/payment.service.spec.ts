@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentService } from '../services/payment.service';
 import { Payment } from '../entities/payment.entity';
 import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
+import { WebhookEvent } from '../entities/webhook-event.entity';
 
 const mockOrderRepository = {
   findOne: jest.fn(),
@@ -12,6 +13,12 @@ const mockOrderRepository = {
 };
 
 const mockPaymentRepository = {
+  create: jest.fn(),
+  save: jest.fn(),
+};
+
+const mockWebhookEventRepository = {
+  findOne: jest.fn().mockResolvedValue(null),
   create: jest.fn(),
   save: jest.fn(),
 };
@@ -59,6 +66,10 @@ describe('PaymentService — handleWebhook', () => {
           useValue: mockPaymentRepository,
         },
         { provide: getRepositoryToken(Order), useValue: mockOrderRepository },
+        {
+          provide: getRepositoryToken(WebhookEvent),
+          useValue: mockWebhookEventRepository,
+        },
       ],
     }).compile();
 

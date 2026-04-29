@@ -3,7 +3,9 @@ import { CheckoutController } from '../controllers/checkout.controller';
 import { CheckoutService } from '../services/checkout.service';
 import { PaymentService } from '../services/payment.service';
 import { CreateOrderDto } from '../dtos/create-order.dto';
-import { PaymentGateway } from '../entities';
+import { ValidateCheckoutDto } from '../dtos/validate-checkout.dto';
+import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
+import { PaymentMethod } from '../entities';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('CheckoutController', () => {
@@ -43,7 +45,8 @@ describe('CheckoutController', () => {
   describe('validateCheckout', () => {
     it('should call service.validateCheckout', async () => {
       const req = { user: { id: 'user-1' } };
-      const checkoutData = { some: 'data' };
+      const checkoutData = new ValidateCheckoutDto();
+      checkoutData.shippingAddressId = 'addr-1';
       await controller.validateCheckout(req, checkoutData);
       expect(service.validateCheckout).toHaveBeenCalledWith(
         'user-1',
@@ -57,7 +60,7 @@ describe('CheckoutController', () => {
       const req = { user: { id: 'user-1' } };
       const orderData: CreateOrderDto = {
         shippingAddressId: 'addr-1',
-        paymentMethod: PaymentGateway.STRIPE,
+        paymentMethod: PaymentMethod.STRIPE,
         paymentToken: 'tok_123',
       };
       await controller.createOrder(req, orderData);
@@ -67,10 +70,11 @@ describe('CheckoutController', () => {
 
   describe('applyCoupon', () => {
     it('should transform code to dto and call service.applyCoupon', async () => {
-      const code = 'SAVE10';
-      await controller.applyCoupon(code);
+      const req = { user: { id: 'user-1' } };
+      const dto: ApplyCouponDto = { code: 'SAVE10' };
+      await controller.applyCoupon(req, dto);
 
-      expect(service.applyCoupon).toHaveBeenCalledWith({ code });
+      expect(service.applyCoupon).toHaveBeenCalledWith(dto);
     });
   });
 });

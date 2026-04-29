@@ -8,6 +8,10 @@ import {
 import { RedisHealthIndicator } from './indicators/redis.health';
 import { ElasticsearchHealthIndicator } from './indicators/elasticsearch.health';
 
+let cachedResult: any = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 5000;
+
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
@@ -21,8 +25,13 @@ export class HealthController {
   @Get()
   @HealthCheck()
   @ApiOperation({ summary: 'Service health check (DB, Redis, Elasticsearch)' })
-  check() {
-    return this.health.check([
+  async check() {
+    const now = Date.now();
+    if (cachedResult && now - cachedAt < CACHE_TTL_MS) {
+      return cachedResult;
+    }
+
+    const result = await this.health.check([
       () => this.db.pingCheck('database'),
       () => this.redis.isHealthy('redis'),
       async () => {
@@ -33,5 +42,9 @@ export class HealthController {
         }
       },
     ]);
+
+    cachedResult = result;
+    cachedAt = now;
+    return result;
   }
 }

@@ -37,17 +37,20 @@ describe('NotificationsGateway', () => {
     it('should join user room on valid token', () => {
       const client: any = {
         handshake: { headers: { authorization: 'Bearer token' } },
+        data: {},
         join: jest.fn(),
       };
       jwtService.verify.mockReturnValue({ sub: 'user1' });
 
       gateway.handleConnection(client);
       expect(client.join).toHaveBeenCalledWith('user:user1');
+      expect(client.data.userId).toBe('user1');
     });
 
     it('should disconnect on invalid token', () => {
       const client: any = {
         handshake: { headers: { authorization: 'Bearer token' } },
+        data: {},
         disconnect: jest.fn(),
       };
       jwtService.verify.mockImplementation(() => {
@@ -56,6 +59,28 @@ describe('NotificationsGateway', () => {
 
       gateway.handleConnection(client);
       expect(client.disconnect).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleDisconnect', () => {
+    it('should leave user room when userId exists on client data', () => {
+      const client: any = {
+        data: { userId: 'user1' },
+        leave: jest.fn(),
+      };
+
+      gateway.handleDisconnect(client);
+      expect(client.leave).toHaveBeenCalledWith('user:user1');
+    });
+
+    it('should not call leave when userId is missing', () => {
+      const client: any = {
+        data: {},
+        leave: jest.fn(),
+      };
+
+      gateway.handleDisconnect(client);
+      expect(client.leave).not.toHaveBeenCalled();
     });
   });
 

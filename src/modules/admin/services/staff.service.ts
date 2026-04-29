@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Staff } from '../entities/staff.entity';
 import { CreateStaffDto } from '../dtos/create-staff.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
 
 @Injectable()
 export class StaffService {
@@ -39,7 +40,7 @@ export class StaffService {
       take: limit,
     });
 
-    return { data, total, page, limit };
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
   async findOne(id: string): Promise<Staff> {

@@ -7,6 +7,7 @@ import { CreateProductDto } from '../dtos/create-product.dto';
 import { UpdateProductDto } from '../dtos/update-product.dto';
 import { FilterDto } from '../dtos/filter.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
 import { SlugUtil } from '../../../common/utils/slug.util';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import { ElasticsearchService } from '../../search/services/elasticsearch.service';
@@ -61,7 +62,15 @@ export class ProductsService {
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const { categoryId, brandId, minPrice, maxPrice, search, sortBy } = filters;
+    const {
+      categoryId,
+      brandId,
+      minPrice,
+      maxPrice,
+      search,
+      sortBy,
+      sortOrder,
+    } = filters;
     const { page = 1, limit = 20 } = pagination;
 
     const query = this.productRepo
@@ -96,15 +105,19 @@ export class ProductsService {
     }
 
     // Apply sorting
+    const order = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     switch (sortBy) {
-      case 'price-asc':
-        query.orderBy('product.basePrice', 'ASC');
+      case 'price':
+        query.orderBy('product.basePrice', order);
         break;
-      case 'price-desc':
-        query.orderBy('product.basePrice', 'DESC');
+      case 'name':
+        query.orderBy("product.name->>'en'", order);
         break;
       case 'rating':
         query.orderBy("product.metadata->>'avgRating'", 'DESC');
+        break;
+      case 'createdAt':
+        query.orderBy('product.createdAt', order);
         break;
       case 'newest':
       default:
@@ -116,7 +129,7 @@ export class ProductsService {
       .take(limit)
       .getManyAndCount();
 
-    const result = { data, total, page, limit };
+    const result = new PaginatedResponseDto(data, page, limit, total);
     await this.cacheService.set(cacheKey, result, 300); // Cache for 5 minutes
     return result;
   }

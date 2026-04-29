@@ -80,11 +80,9 @@ Send \`Accept-Language\` header to get locale-specific responses.
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
         description: 'Enter JWT token as: Bearer <token>',
-        in: 'header',
       },
-      'JWT-AUTH',
+      'bearer',
     )
     .addServer('http://localhost:3000', 'Local Development')
     .addTag('Authentication', 'User registration, login, password management')

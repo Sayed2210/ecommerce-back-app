@@ -15,12 +15,20 @@ import { OrderItem } from './entities/order-item.entity';
 import { Payment } from './entities/payment.entity';
 import { Shipping } from './entities/shipping.entity';
 import { Coupon } from './entities/coupon.entity';
+import { WebhookEvent } from './entities/webhook-event.entity';
 import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order, OrderItem, Payment, Shipping, Coupon]),
+    TypeOrmModule.forFeature([
+      Order,
+      OrderItem,
+      Payment,
+      Shipping,
+      Coupon,
+      WebhookEvent,
+    ]),
     CartModule,
     UsersModule,
   ],

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,6 +11,7 @@ import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { OrderStatus } from '../entities/order.entity';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
 
 @Injectable()
 export class OrdersService {
@@ -44,7 +46,7 @@ export class OrdersService {
       take: limit,
     });
 
-    return { data, total, page, limit };
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
   async findOne(id: string, userId?: string) {
@@ -53,8 +55,9 @@ export class OrdersService {
       relations: [
         'user',
         'items',
-        'items.productVariant',
-        'items.productVariant.product',
+        'items.product',
+        'items.variant',
+        'items.variant.product',
         'shippingAddress',
         'coupon',
       ],
@@ -64,8 +67,8 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (userId && order.user.id !== userId) {
-      throw new BadRequestException('You cannot access this order');
+    if (userId && order.user?.id !== userId) {
+      throw new ForbiddenException('You cannot access this order');
     }
 
     return order;
@@ -105,10 +108,20 @@ export class OrdersService {
     return order;
   }
 
-  async getOrderAnalytics(userId?: string) {
+  async getOrderAnalytics(filters?: {
+    from?: string;
+    to?: string;
+    granularity?: 'day' | 'week' | 'month';
+    userId?: string;
+  }) {
     const where: any = {};
-    if (userId) {
-      where.user = { id: userId };
+    if (filters?.userId) {
+      where.user = { id: filters.userId };
+    }
+    if (filters?.from || filters?.to) {
+      where.createdAt = {};
+      if (filters.from) where.createdAt.gte = new Date(filters.from);
+      if (filters.to) where.createdAt.lte = new Date(filters.to);
     }
 
     const [totalOrders, totalRevenue, pendingOrders, deliveredOrders] =
@@ -128,6 +141,7 @@ export class OrdersService {
       totalRevenue: totalRevenue || 0,
       pendingOrders,
       deliveredOrders,
+      granularity: filters?.granularity || 'day',
     };
   }
 }

@@ -93,9 +93,9 @@ describe('AuthController', () => {
 
   describe('logout', () => {
     it('should call authService.logout', async () => {
-      const dto: RefreshTokenDto = { refreshToken: 'refresh-token' };
-      await controller.logout(dto);
-      expect(authService.logout).toHaveBeenCalledWith(dto.refreshToken);
+      const req = { user: { id: 'user-id' } } as any;
+      await controller.logout(req);
+      expect(authService.logout).toHaveBeenCalledWith(req.user.id);
     });
   });
 });

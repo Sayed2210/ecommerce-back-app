@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { OrdersService } from '../services/orders.service';
 import { Order, OrderStatus } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
@@ -49,7 +49,7 @@ describe('OrdersService', () => {
       orderRepository.findAndCount.mockResolvedValue(result);
 
       const response = await service.findAll({}, pagination);
-      expect(response.total).toBe(0);
+      expect(response.meta.total).toBe(0);
     });
   });
 
@@ -66,11 +66,11 @@ describe('OrdersService', () => {
       await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException if user does not own order', async () => {
+    it('should throw ForbiddenException if user does not own order', async () => {
       const order = { id: '1', user: { id: 'u1' } };
       orderRepository.findOne.mockResolvedValue(order);
       await expect(service.findOne('1', 'u2')).rejects.toThrow(
-        BadRequestException,
+        ForbiddenException,
       );
     });
   });
@@ -97,12 +97,13 @@ describe('OrdersService', () => {
       orderRepository.count.mockResolvedValue(10);
       orderRepository.sum.mockResolvedValue(1000);
 
-      const result = await service.getOrderAnalytics('u1');
+      const result = await service.getOrderAnalytics({ userId: 'u1' });
       expect(result).toEqual({
         totalOrders: 10,
         totalRevenue: 1000,
         pendingOrders: 10,
         deliveredOrders: 10,
+        granularity: 'day',
       });
     });
   });

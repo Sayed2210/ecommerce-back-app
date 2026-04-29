@@ -1,12 +1,8 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
@@ -15,11 +11,9 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
 import { AnalyticsService } from '../services/analytics.service';
-import { CreateAuditLogDto } from '../dtos/audit-log.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 /**
@@ -47,21 +41,6 @@ export class AnalyticsController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
     return this.analyticsService.getAuditLogs(limit);
-  }
-
-  /**
-   * Create audit log entry
-   */
-  @Post('audit-logs')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Create audit log',
-    description: 'Manually create an audit log entry',
-  })
-  @ApiBody({ type: CreateAuditLogDto })
-  @ApiResponse({ status: 201, description: 'Audit log created' })
-  async createAuditLog(@Body() createAuditLogDto: CreateAuditLogDto) {
-    return this.analyticsService.logAction(createAuditLogDto);
   }
 
   /**

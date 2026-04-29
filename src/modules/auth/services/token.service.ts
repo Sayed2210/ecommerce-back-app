@@ -124,6 +124,10 @@ export class TokenService {
     await this.refreshTokenRepository.delete({ token });
   }
 
+  async revokeAllUserTokens(userId: string): Promise<void> {
+    await this.refreshTokenRepository.delete({ userId });
+  }
+
   async revokeResetToken(token: string): Promise<void> {
     const tokenHash = this.hashToken(token);
     await this.redisService.set(

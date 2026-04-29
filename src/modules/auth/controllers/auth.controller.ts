@@ -23,6 +23,7 @@ import { RefreshTokenDto } from '../dtos/refresh-token.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { ChangePasswordDto } from '../dtos/change-password.dto';
+import { TokenResponseDto } from '../dtos/token-response.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 /**
@@ -46,7 +47,11 @@ export class AuthController {
     description: 'Create a new user account with email and password',
   })
   @ApiBody({ type: RegisterDto })
-  @ApiResponse({ status: 201, description: 'User successfully registered' })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully registered',
+    type: TokenResponseDto,
+  })
   @ApiResponse({
     status: 400,
     description: 'Invalid input or email already exists',
@@ -70,6 +75,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login successful, returns access and refresh tokens',
+    type: TokenResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
@@ -86,7 +92,11 @@ export class AuthController {
     description: 'Get new access token using refresh token',
   })
   @ApiBody({ type: RefreshTokenDto })
-  @ApiResponse({ status: 200, description: 'New access token generated' })
+  @ApiResponse({
+    status: 200,
+    description: 'New access token generated',
+    type: TokenResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshTokens(refreshTokenDto);
@@ -174,7 +184,7 @@ export class AuthController {
   }
 
   /**
-   * Logout user and revoke refresh token
+   * Logout user and revoke all refresh tokens
    */
   @Post('logout')
   @UseGuards(JwtAuthGuard)
@@ -182,12 +192,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Logout',
-    description: 'Logout user and revoke refresh token',
+    description: 'Logout user and revoke all refresh tokens',
   })
-  @ApiBody({ type: RefreshTokenDto })
   @ApiResponse({ status: 200, description: 'Successfully logged out' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async logout(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.logout(refreshTokenDto.refreshToken);
+  async logout(@Request() req) {
+    return this.authService.logout(req.user.id);
   }
 }

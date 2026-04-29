@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment, PaymentGateway } from '../entities/payment.entity';
 import { Order, OrderStatus, PaymentStatus } from '../entities/order.entity';
+import { WebhookEvent } from '../entities/webhook-event.entity';
 
 @Injectable()
 export class PaymentService {
@@ -17,6 +18,8 @@ export class PaymentService {
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(WebhookEvent)
+    private readonly webhookEventRepository: Repository<WebhookEvent>,
   ) {
     this.stripe = new Stripe(configService.get('STRIPE_SECRET_KEY'), {
       apiVersion: '2023-10-16' as any,
@@ -103,7 +106,23 @@ export class PaymentService {
       );
     }
 
-    // Step 2: Process event — log errors but always return 200 to prevent Stripe retries
+    // Step 2: Check for duplicate event (idempotency)
+    const existingEvent = await this.webhookEventRepository.findOne({
+      where: { eventId: event.id },
+    });
+    if (existingEvent) {
+      this.logger.log(`Duplicate webhook event: ${event.id}`);
+      return { received: true, duplicate: true };
+    }
+
+    // Save event before processing
+    await this.webhookEventRepository.save({
+      eventId: event.id,
+      eventType: event.type,
+      payload: event.data.object as any,
+    });
+
+    // Step 3: Process event — log errors but always return 200 to prevent Stripe retries
     try {
       switch (event.type) {
         case 'payment_intent.succeeded':

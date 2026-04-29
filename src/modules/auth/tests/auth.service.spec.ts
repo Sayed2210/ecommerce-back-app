@@ -94,6 +94,8 @@ describe('AuthService', () => {
         tokens.refreshToken,
       );
       expect(result).toEqual({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         user: {
           id: 'uuid',
           email: registerDto.email,
@@ -101,7 +103,6 @@ describe('AuthService', () => {
           lastName: registerDto.lastName,
           password: registerDto.password, // Original DTO prop, but sanitized user shouldn't have passwordHash
         },
-        tokens,
       });
       // Manual verification of sanitize: remove passwordHash
       expect(result.user).not.toHaveProperty('passwordHash');
@@ -149,8 +150,9 @@ describe('AuthService', () => {
       );
       expect(tokenService.generateTokens).toHaveBeenCalledWith(user.id);
       expect(result).toEqual({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         user: { id: 'uuid', email: loginDto.email }, // sanitized
-        tokens,
       });
     });
 

@@ -51,15 +51,29 @@ describe('NotificationService', () => {
         type: NotificationType.SYSTEM,
         title: 'Test',
       };
-      const notification = { id: 'n1', ...dto };
+      const notification = {
+        id: 'n1',
+        ...dto,
+        data: {},
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      };
       notificationRepository.create.mockResolvedValue(notification);
 
       const result = await service.create(dto);
       expect(result).toBe(notification);
-      expect(notificationsGateway.sendNotification).toHaveBeenCalledWith(
-        'u1',
-        notification,
-      );
+      expect(notificationsGateway.sendNotification).toHaveBeenCalledWith('u1', {
+        id: 'n1',
+        type: NotificationType.SYSTEM,
+        title: 'Test',
+        message: undefined,
+        actionUrl: undefined,
+        data: {},
+        readAt: undefined,
+        userId: 'u1',
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      });
     });
   });
 
@@ -68,7 +82,7 @@ describe('NotificationService', () => {
       notificationRepository.findAndCount.mockResolvedValue([[], 0]);
       const result = await service.findAll('u1', { page: 1, limit: 10 });
       expect(result.data).toEqual([]);
-      expect(result.total).toBe(0);
+      expect(result.meta.total).toBe(0);
     });
   });
 
@@ -81,14 +95,18 @@ describe('NotificationService', () => {
         readAt: new Date(),
       });
 
-      const result = await service.markAsRead('n1');
+      const result = await service.markAsRead('n1', 'u1');
       expect(result.readAt).toBeDefined();
       expect(notificationRepository.save).toHaveBeenCalled();
+      expect(notificationRepository.findOne).toHaveBeenCalledWith({
+        id: 'n1',
+        user: { id: 'u1' },
+      });
     });
 
     it('should throw NotFoundException when notification not found', async () => {
       notificationRepository.findOne.mockResolvedValue(null);
-      await expect(service.markAsRead('missing')).rejects.toThrow(
+      await expect(service.markAsRead('missing', 'u1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -110,9 +128,10 @@ describe('NotificationService', () => {
       notificationRepository.findOneOrFail.mockResolvedValue(notification);
       notificationRepository.remove.mockResolvedValue(notification);
 
-      await service.remove('n1');
+      await service.remove('n1', 'u1');
       expect(notificationRepository.findOneOrFail).toHaveBeenCalledWith({
         id: 'n1',
+        user: { id: 'u1' },
       });
       expect(notificationRepository.remove).toHaveBeenCalledWith(notification);
     });
@@ -121,7 +140,7 @@ describe('NotificationService', () => {
       notificationRepository.findOneOrFail.mockRejectedValue(
         new NotFoundException(),
       );
-      await expect(service.remove('missing')).rejects.toThrow(
+      await expect(service.remove('missing', 'u1')).rejects.toThrow(
         NotFoundException,
       );
     });

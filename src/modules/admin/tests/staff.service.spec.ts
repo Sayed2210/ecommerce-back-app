@@ -71,9 +71,9 @@ describe('StaffService', () => {
 
       const result = await service.findAll({ page: 1, limit: 10 });
 
-      expect(result.total).toBe(2);
+      expect(result.meta.total).toBe(2);
       expect(result.data).toHaveLength(2);
-      expect(result.page).toBe(1);
+      expect(result.meta.page).toBe(1);
     });
 
     it('applies skip based on page number', async () => {

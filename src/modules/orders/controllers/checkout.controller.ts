@@ -22,6 +22,11 @@ import { PaymentService } from '../services/payment.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { EmailVerifiedGuard } from '../../../common/guards/email-verified.guard';
 import { CreateOrderDto } from '../dtos/create-order.dto';
+import {
+  ValidateCheckoutDto,
+  ValidateCheckoutResponseDto,
+} from '../dtos/validate-checkout.dto';
+import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
 
 /**
  * Checkout Controller
@@ -60,9 +65,16 @@ export class CheckoutController {
     summary: 'Validate checkout',
     description: 'Validate cart and checkout data before order creation',
   })
-  @ApiResponse({ status: 200, description: 'Checkout validation successful' })
+  @ApiResponse({
+    status: 200,
+    description: 'Checkout validation successful',
+    type: ValidateCheckoutResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Validation failed' })
-  async validateCheckout(@Request() req, @Body() checkoutData: any) {
+  async validateCheckout(
+    @Request() req,
+    @Body() checkoutData: ValidateCheckoutDto,
+  ): Promise<ValidateCheckoutResponseDto> {
     return this.checkoutService.validateCheckout(req.user.id, checkoutData);
   }
 
@@ -100,7 +112,7 @@ export class CheckoutController {
   })
   @ApiResponse({ status: 200, description: 'Coupon successfully applied' })
   @ApiResponse({ status: 400, description: 'Invalid or expired coupon' })
-  async applyCoupon(@Body('code') code: string) {
-    return this.checkoutService.applyCoupon({ code } as any);
+  async applyCoupon(@Request() req, @Body() dto: ApplyCouponDto) {
+    return this.checkoutService.applyCoupon(dto);
   }
 }

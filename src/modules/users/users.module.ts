@@ -10,6 +10,8 @@ import { WishlistController } from './controllers/wishlist.controller';
 import { WishlistService } from './services/wishlist.service';
 import { UserRepository } from './repositories/user.repository';
 import { ProductsModule } from '../products/products.module';
+import { AddressesController } from './controllers/addresses.controller';
+import { AddressesService } from './services/addresses.service';
 // import { OAuthProvider } from './entities/oauth-provider.entity'; // Assuming it exists
 
 @Module({
@@ -18,8 +20,8 @@ import { ProductsModule } from '../products/products.module';
     ProductsModule,
     PassportModule, // Changed from .register to avoid potential isolation issues
   ],
-  controllers: [UsersController, WishlistController],
-  providers: [UsersService, UserRepository, WishlistService],
+  controllers: [UsersController, WishlistController, AddressesController],
+  providers: [UsersService, UserRepository, WishlistService, AddressesService],
   exports: [UsersService, UserRepository, TypeOrmModule], // Export TypeOrmModule to allow access to Address entity
 })
 export class UsersModule {}

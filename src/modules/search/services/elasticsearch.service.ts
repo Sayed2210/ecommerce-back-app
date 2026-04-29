@@ -2,16 +2,19 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
 import { Product } from '@modules/products/entities/product.entity';
+import { PaginatedResponseDto } from '@common/dtos/paginated-response.dto';
 
 const PRODUCTS_INDEX = 'products';
 
 interface SearchFilters {
   category?: string;
   brands?: string[];
+  tags?: string[];
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
   sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
   page: number;
   limit: number;
 }
@@ -170,6 +173,10 @@ export class ElasticsearchService implements OnModuleInit {
       mustQueries.push({ terms: { brand: filters.brands } });
     }
 
+    if (filters.tags?.length) {
+      mustQueries.push({ terms: { tags: filters.tags } });
+    }
+
     if (filters.minPrice || filters.maxPrice) {
       mustQueries.push({
         range: {
@@ -196,7 +203,7 @@ export class ElasticsearchService implements OnModuleInit {
             filter: [{ term: { isActive: true } }],
           },
         },
-        sort: this.getSortClause(filters.sortBy),
+        sort: this.getSortClause(filters.sortBy, filters.sortOrder),
       },
     } as any);
 
@@ -205,10 +212,8 @@ export class ElasticsearchService implements OnModuleInit {
         ? result.hits.total
         : (result.hits.total?.value ?? 0);
 
-    return {
-      products: result.hits.hits.map((hit) => hit._source),
-      total,
-    };
+    const data = result.hits.hits.map((hit) => hit._source);
+    return new PaginatedResponseDto(data, filters.page, filters.limit, total);
   }
 
   async ping(): Promise<void> {
@@ -217,14 +222,16 @@ export class ElasticsearchService implements OnModuleInit {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  private getSortClause(sortBy?: string) {
+  private getSortClause(sortBy?: string, sortOrder?: 'asc' | 'desc') {
+    const order = sortOrder || 'desc';
     switch (sortBy) {
-      case 'price-low':
-        return [{ price: { order: 'asc' as const } }];
-      case 'price-high':
-        return [{ price: { order: 'desc' as const } }];
+      case 'price':
+        return [{ price: { order: order } }];
+      case 'name':
+        return [{ 'name.en.keyword': { order: order } }];
       case 'newest':
-        return [{ createdAt: { order: 'desc' as const } }];
+      case 'createdAt':
+        return [{ createdAt: { order: order } }];
       case 'rating':
         return [{ 'metadata.avgRating': { order: 'desc' as const } }];
       default:

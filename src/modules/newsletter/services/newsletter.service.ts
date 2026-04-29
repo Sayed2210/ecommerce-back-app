@@ -58,6 +58,17 @@ export class NewsletterService {
     return { message: 'Successfully unsubscribed' };
   }
 
+  async unsubscribeByEmail(email: string): Promise<{ message: string }> {
+    const subscriber = await this.subscriberRepository.findOne({ email });
+
+    if (!subscriber) throw new NotFoundException('Subscriber not found');
+
+    subscriber.isActive = false;
+    await this.subscriberRepository.save(subscriber);
+
+    return { message: 'Successfully unsubscribed' };
+  }
+
   async sendCampaign(dto: SendCampaignDto): Promise<{ queued: number }> {
     const subscribers = await this.subscriberRepository.find({
       where: { isActive: true },

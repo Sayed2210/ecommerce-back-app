@@ -2,7 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Notification } from '../entities/notification.entity';
 import { CreateNotificationDto } from '../dto/notification.dto';
 import { PaginationDto } from '../../../common/dtos/pagination.dto';
-import { NotificationsGateway } from './websocket.gateway';
+import { PaginatedResponseDto } from '../../../common/dtos/paginated-response.dto';
+import {
+  NotificationSocketDto,
+  NotificationsGateway,
+} from './websocket.gateway';
 import { Inject, forwardRef } from '@nestjs/common';
 import { NotificationRepository } from '../repositories/notification.repository';
 
@@ -26,7 +30,7 @@ export class NotificationService {
     // Emit real-time event
     this.notificationsGateway.sendNotification(
       createNotificationDto.userId,
-      savedNotification as any,
+      this.toSocketDto(savedNotification, createNotificationDto.userId),
     );
 
     return savedNotification;
@@ -41,15 +45,14 @@ export class NotificationService {
       take: limit,
     });
 
-    return { data, total, page, limit };
+    return new PaginatedResponseDto(data, page, limit, total);
   }
 
-  async markAsRead(id: string, userId?: string): Promise<Notification> {
-    const where: any = { id };
-    if (userId) {
-      where.user = { id: userId };
-    }
-    const notification = await this.notificationRepository.findOne(where);
+  async markAsRead(id: string, userId: string): Promise<Notification> {
+    const notification = await this.notificationRepository.findOne({
+      id,
+      user: { id: userId },
+    } as any);
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${id} not found`);
     }
@@ -61,10 +64,29 @@ export class NotificationService {
     await this.notificationRepository.markAllReadByUser(userId);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId: string): Promise<void> {
     const notification = await this.notificationRepository.findOneOrFail({
       id,
+      user: { id: userId },
     } as any);
     await this.notificationRepository.remove(notification);
+  }
+
+  private toSocketDto(
+    notification: Notification,
+    userId: string,
+  ): NotificationSocketDto {
+    return {
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      actionUrl: notification.actionUrl,
+      data: notification.data,
+      readAt: notification.readAt,
+      userId,
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
+    };
   }
 }

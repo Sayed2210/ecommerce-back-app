@@ -29,7 +29,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
  */
 @ApiTags('User Addresses')
 @ApiBearerAuth()
-@Controller('addresses')
+@Controller('users/me/addresses')
 @UseGuards(JwtAuthGuard)
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}

@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -20,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { CouponService } from '../services/coupon.service';
 import { CreateCouponDto, UpdateCouponDto } from '../dtos/create-coupon.dto';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -52,8 +54,8 @@ export class CouponsController {
   @Get()
   @ApiOperation({ summary: 'Get all coupons', description: 'List all coupons' })
   @ApiResponse({ status: 200, description: 'List of coupons' })
-  async findAll() {
-    return this.couponService.findAll();
+  async findAll(@Query() pagination: PaginationDto) {
+    return this.couponService.findAll(pagination);
   }
 
   @Get(':id')

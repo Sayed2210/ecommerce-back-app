@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PaymentGateway } from '../entities/payment.entity';
+import { PaymentMethod } from '../entities/order.entity';
 
 export class CreateOrderDto {
   @ApiProperty({
@@ -22,11 +22,11 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Payment method',
-    example: PaymentGateway.STRIPE,
-    enum: PaymentGateway,
+    example: PaymentMethod.STRIPE,
+    enum: PaymentMethod,
   })
-  @IsEnum(PaymentGateway)
-  paymentMethod: PaymentGateway;
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod;
 
   @ApiProperty({
     description: 'Payment token from payment gateway (optional)',

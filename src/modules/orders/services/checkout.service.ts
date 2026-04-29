@@ -6,21 +6,20 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { Order } from '../entities/order.entity';
+import { Order, OrderStatus, PaymentMethod } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Cart } from '../../cart/entities/cart.entity';
 import { CartItem } from '../../cart/entities/cart-item.entity';
 import { CreateOrderDto } from '../dtos/create-order.dto';
 import { ApplyCouponDto } from '../dtos/apply-coupon.dto';
 import { Coupon, CouponType } from '../entities/coupon.entity';
-import { OrderStatus } from '../entities/order.entity';
 import { PaymentService } from './payment.service';
 import { ShippingService } from './shipping.service';
 import { TaxService } from './tax.service';
 import { BullmqService } from '../../../infrastructure/queue/bullmq.service';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
+import { Product } from '../../products/entities/product.entity';
 import { Address } from '../../users/entities/address.entity';
-import { PaymentGateway } from '../entities';
 
 @Injectable()
 export class CheckoutService {
@@ -41,7 +40,12 @@ export class CheckoutService {
     // For now, checks if cart exists and is not empty as a basic validation
     const cart = await this.dataSource.manager.findOne(Cart, {
       where: { user: { id: userId } },
-      relations: ['items', 'items.variant', 'items.variant.product'],
+      relations: [
+        'items',
+        'items.product',
+        'items.variant',
+        'items.variant.product',
+      ],
     });
 
     if (!cart || cart.items.length === 0) {
@@ -51,12 +55,27 @@ export class CheckoutService {
     // Check inventory
     const errors = [];
     for (const item of cart.items) {
-      const available =
-        item.variant.inventoryQuantity - item.variant.reservedQuantity;
+      const hasVariant = !!item.variant;
+      const available = hasVariant
+        ? item.variant.inventoryQuantity - item.variant.reservedQuantity
+        : (item.product?.inventoryQuantity ?? 0);
+      const itemName =
+        (hasVariant
+          ? item.variant?.product?.name?.['en']
+          : item.product?.name?.['en']) ??
+        (hasVariant
+          ? JSON.stringify(item.variant?.product?.name)
+          : JSON.stringify(item.product?.name)) ??
+        item.product?.slug ??
+        'this item';
+
+      if (!hasVariant && !item.product) {
+        errors.push('Cart contains an invalid item with missing product data');
+        continue;
+      }
+
       if (item.quantity > available) {
-        errors.push(
-          `Insufficient stock for ${item.variant.product.name?.['en'] ?? JSON.stringify(item.variant.product.name)}`,
-        );
+        errors.push(`Insufficient stock for ${itemName}`);
       }
     }
 
@@ -72,20 +91,56 @@ export class CheckoutService {
       // Get cart
       const cart = await manager.findOne(Cart, {
         where: { user: { id: userId } },
-        relations: ['items', 'items.variant', 'items.variant.product'],
+        relations: [
+          'items',
+          'items.product',
+          'items.variant',
+          'items.variant.product',
+        ],
       });
 
       if (!cart || cart.items.length === 0) {
         throw new BadRequestException('Cart is empty');
       }
 
-      // Validate inventory
+      // Validate inventory with pessimistic lock to prevent race conditions
       for (const item of cart.items) {
-        const available =
-          item.variant.inventoryQuantity - item.variant.reservedQuantity;
-        if (item.quantity > available) {
+        if (item.variant?.id) {
+          const variantWithLock = await manager
+            .createQueryBuilder(ProductVariant, 'v')
+            .setLock('pessimistic_write')
+            .leftJoinAndSelect('v.product', 'product')
+            .where('v.id = :id', { id: item.variant.id })
+            .getOne();
+
+          if (!variantWithLock) {
+            throw new BadRequestException('Product variant not found');
+          }
+
+          const available =
+            variantWithLock.inventoryQuantity -
+            variantWithLock.reservedQuantity;
+          if (item.quantity > available) {
+            throw new BadRequestException(
+              `Insufficient stock for ${variantWithLock.product?.name?.['en'] ?? JSON.stringify(variantWithLock.product?.name)}`,
+            );
+          }
+          continue;
+        }
+
+        const productWithLock = await manager
+          .createQueryBuilder(Product, 'p')
+          .setLock('pessimistic_write')
+          .where('p.id = :id', { id: item.product?.id })
+          .getOne();
+
+        if (!productWithLock) {
+          throw new BadRequestException('Product not found');
+        }
+
+        if (item.quantity > productWithLock.inventoryQuantity) {
           throw new BadRequestException(
-            `Insufficient stock for ${item.variant.product.name?.['en'] ?? JSON.stringify(item.variant.product.name)}`,
+            `Insufficient stock for ${productWithLock.name?.['en'] ?? JSON.stringify(productWithLock.name)}`,
           );
         }
       }
@@ -94,8 +149,8 @@ export class CheckoutService {
       let subtotal = 0;
       for (const item of cart.items) {
         const price =
-          Number(item.variant.product.basePrice) +
-          Number(item.variant.priceModifier);
+          Number(item.product.basePrice) +
+          Number(item.variant?.priceModifier ?? 0);
         subtotal += price * item.quantity;
       }
 
@@ -147,51 +202,78 @@ export class CheckoutService {
       );
       totalAmount += taxAmount;
 
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
       // Create order
       const order = manager.create(Order, {
         user: { id: userId },
+        orderNumber,
         items: [],
         subtotal,
         taxAmount,
         discountAmount: discount,
-        shippingCost,
+        shippingAmount: shippingCost,
         totalAmount,
+        currency: 'USD',
         status: OrderStatus.PENDING,
         shippingAddress: { id: dto.shippingAddressId },
-        paymentInfo: { method: dto.paymentMethod }, // Entity structure mismatch? Order has paymentInfo or paymentMethod?
+        paymentMethod: dto.paymentMethod,
       });
-      // Update: Order entity check needed.
-      // CheckoutService line 92: `paymentMethod: dto.paymentMethod`.
-      // Order entity line? I'll check Order entity fields.
-      // Assuming `discount` -> `discountAmount`.
 
       const savedOrder = await manager.save(Order, order);
 
       // Create order items
       const orderItems = cart.items.map((item) => {
         const price =
-          Number(item.variant.product.basePrice) +
-          Number(item.variant.priceModifier);
+          Number(item.product.basePrice) +
+          Number(item.variant?.priceModifier ?? 0);
         return manager.create(OrderItem, {
           order: { id: savedOrder.id },
-          productVariant: { id: item.variant.id },
+          product: { id: item.product.id },
+          variant: item.variant ? { id: item.variant.id } : undefined,
+          productName:
+            item.product.name?.['en'] ?? JSON.stringify(item.product.name),
+          variantName: item.variant
+            ? (item.variant.variantName?.['en'] ??
+              JSON.stringify(item.variant.variantName))
+            : undefined,
+          sku: item.variant?.sku ?? item.product.sku,
           quantity: item.quantity,
-          price: price,
-          total: price * item.quantity,
+          unitPrice: price,
+          totalPrice: price * item.quantity,
         });
       });
 
       await manager.save(OrderItem, orderItems);
       savedOrder.items = orderItems;
 
+      // Update coupon usage count
+      if (dto.couponCode) {
+        await manager.increment(
+          Coupon,
+          { code: dto.couponCode },
+          'usageCount',
+          1,
+        );
+      }
+
       // Reserve inventory
       for (const item of cart.items) {
-        // Update ProductVariant
-        // manager.update(EntityTarget, Criteria, PartialEntity)
-        await manager.update(
-          ProductVariant, // Correct Class
-          { id: item.variant.id },
-          { reservedQuantity: item.variant.reservedQuantity + item.quantity },
+        if (item.variant?.id) {
+          await manager.update(
+            ProductVariant,
+            { id: item.variant.id },
+            { reservedQuantity: item.variant.reservedQuantity + item.quantity },
+          );
+          continue;
+        }
+
+        await manager.decrement(
+          Product,
+          { id: item.product.id },
+          'inventoryQuantity',
+          item.quantity,
         );
       }
 
@@ -200,13 +282,13 @@ export class CheckoutService {
 
       // Process payment
       let paymentResult;
-      if (dto.paymentMethod === PaymentGateway.STRIPE) {
+      if (dto.paymentMethod === PaymentMethod.STRIPE) {
         paymentResult = await this.paymentService.createPaymentIntent(
           savedOrder.id,
           totalAmount,
           dto.paymentToken,
         );
-      } else if (dto.paymentMethod === PaymentGateway.CASH_ON_DELIVERY) {
+      } else if (dto.paymentMethod === PaymentMethod.COD) {
         paymentResult = { status: 'pending', message: 'Cash on delivery' };
       }
 
